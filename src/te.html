@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المستخدم</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <button class="close-sidebar-btn"><i class="fas fa-times"></i></button>
+            <div class="sidebar-header">
+                <h2>لوحة التحكم</h2>
+            </div>
+            <nav class="sidebar-menu">
+                <ul>
+                    <li><a href="#" data-section="dashboard-section" class="active"><i class="fas fa-home"></i> الرئيسية</a></li>
+                    <li><a href="#" data-section="requests-section"><i class="fas fa-clipboard-list"></i> طلباتي</a></li>
+                    <li><a href="#" data-section="profile-section"><i class="fas fa-user"></i> الملف الشخصي</a></li>
+                    <li><a href="#" data-section="help-section"><i class="fas fa-question-circle"></i> المساعدة</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="logout-btn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+            </div>
+        </aside>
+
+        <div class="sidebar-overlay"></div>
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle-btn" aria-label="فتح القائمة"><i class="fas fa-bars"></i></button>
+                <h1 class="mainTile">الرئيسية</h1>
+            </header>
+
+            <section id="dashboard-section" class="content-section active">
+                <div class="cards-section">
+                    <div class="card status-card">
+                        <div class="card-content">
+                            <h3>حالة الطلبات</h3>
+                            <div class="status-indicators">
+                                <p>الطلبات المعلقة: <span class="status-binding">5</span></p>
+                                <p>الطلبات المعتمدة: <span class="status-approved">12</span></p>
+                                <p>الطلبات المرفوضة: <span class="status-rejected">2</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card new-request-card">
+                        <div class="card-content">
+                            <h3>إنشاء طلب جديد</h3>
+                            <button class="new-request-btn" id="open-full-day-request-form-btn">
+                                <i class="fas fa-plus-circle"></i> طلب إجازة يوم كامل
+                            </button>
+                            <button class="new-request-btn" id="open-part-time-request-form-btn" style="margin-top: 1rem;">
+                                <i class="fas fa-clock"></i> طلب إجازة جزئية
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>إجمالي الطلبات</h3>
+                            <div class="card-value">19</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>الأيام المتاحة</h3>
+                            <div class="card-value">20</div> </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>الساعات المتاحة</h3>
+                            <div class="card-value">160</div> </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="requests-section" class="content-section">
+                <div class="requests-container">
+                    <h2>طلباتي</h2>
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="status-filter">حالة الطلب:</label>
+                            <select id="status-filter" class="filter-select">
+                                <option value="all">الكل</option>
+                                <option value="pending">قيد الانتظار</option>
+                                <option value="approved">معتمد</option>
+                                <option value="rejected">مرفوض</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary apply-filter-btn" id="apply-filter-btn">تطبيق الفلاتر</button>
+                        <button class="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn">
+                            <i class="fas fa-file-pdf"></i> تصدير كـ PDF
+                        </button>
+                    </div>
+
+                    <table class="requests-table" id="requests-table"> <thead>
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>تاريخ الطلب</th>
+                                <th>وصف الطلب</th>
+                                <th>الحالة</th>
+                                <th>خيارات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="request-row-001">
+                                <td>#001</td>
+                                <td>2024-05-20</td>
+                                <td>طلب إجازة سنوية (يوم كامل)</td>
+                                <td><span class="status-badge status-binding">قيد الانتظار</span></td>
+                                <td class="actions-cell">
+                                    <button class="options-button" aria-label="خيارات الطلب">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="options-menu" data-parent-id="request-row-001">
+                                        <li><a href="#" class="edit-request-btn"><i class="fas fa-edit"></i> تعديل</a></li>
+                                        <li><a href="#" class="delete-request-btn"><i class="fas fa-trash-alt"></i> حذف</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr id="request-row-002">
+                                <td>#002</td>
+                                <td>2024-05-18</td>
+                                <td>طلب إجازة جزئية (ساعتان)</td>
+                                <td><span class="status-badge status-approved">معتمد</span></td>
+                                <td class="actions-cell">
+                                    <button class="options-button" aria-label="خيارات الطلب">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="options-menu" data-parent-id="request-row-002">
+                                        <li><a href="#" class="edit-request-btn"><i class="fas fa-edit"></i> تعديل</a></li>
+                                        <li><a href="#" class="delete-request-btn"><i class="fas fa-trash-alt"></i> حذف</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr id="request-row-003">
+                                <td>#003</td>
+                                <td>2024-05-15</td>
+                                <td>طلب إجازة مرضية (يوم كامل)</td>
+                                <td><span class="status-badge status-rejected">مرفوض</span></td>
+                                <td class="actions-cell">
+                                    <button class="options-button" aria-label="خيارات الطلب">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="options-menu" data-parent-id="request-row-003">
+                                        <li><a href="#" class="edit-request-btn"><i class="fas fa-edit"></i> تعديل</a></li>
+                                        <li><a href="#" class="delete-request-btn"><i class="fas fa-trash-alt"></i> حذف</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr id="request-row-004">
+                                <td>#004</td>
+                                <td>2024-05-10</td>
+                                <td>طلب إجازة سنوية (يوم كامل)</td>
+                                <td><span class="status-badge status-binding">قيد الانتظار</span></td>
+                                <td class="actions-cell">
+                                    <button class="options-button" aria-label="خيارات الطلب">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="options-menu" data-parent-id="request-row-004">
+                                        <li><a href="#" class="edit-request-btn"><i class="fas fa-edit"></i> تعديل</a></li>
+                                        <li><a href="#" class="delete-request-btn"><i class="fas fa-trash-alt"></i> حذف</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="profile-section" class="content-section">
+                <div class="profile-container">
+                    <h2>الملف الشخصي</h2>
+                    <div class="profile-card">
+                        <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
+                        <h3>اسم المستخدم: أحمد محمد</h3>
+                        <div class="profile-details">
+                            <div class="detail-item">
+                                <span class="detail-label">البريد الإلكتروني:</span> ahmed.mohamed@example.com
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">الهاتف:</span> +964 770 123 4567
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">القسم:</span> الموارد البشرية
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">تاريخ الانضمام:</span> 2020-01-15
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-card available-balance-card">
+                        <div class="card-content"> <h3>الرصيد المتاح</h3>
+                            <div class="balance-indicators">
+                                <p>أيام الإجازة: <span class="balance-value">20 يوم</span></p>
+                                <p>ساعات الإجازة: <span class="balance-value">160 ساعة</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="help-section" class="content-section">
+                <div class="help-container">
+                    <h2>المساعدة</h2>
+                    <div class="help-card">
+                        <div class="faq-item">
+                            <h3>كيف يمكنني تقديم طلب جديد؟</h3>
+                            <p>يمكنك تقديم طلب جديد بالضغط على زر "طلب إجازة يوم كامل" أو "طلب إجازة جزئية" في لوحة التحكم الرئيسية وملء النموذج.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>أين يمكنني متابعة حالة طلباتي؟</h3>
+                            <p>يمكنك الانتقال إلى قسم "طلباتي" لمشاهدة جميع طلباتك وحالتها الحالية.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>كيف أقوم بتحديث معلومات ملفي الشخصي؟</h3>
+                            <p>توجه إلى قسم "الملف الشخصي" لعرض معلوماتك. (ميزة التعديل ستضاف لاحقًا)</p>
+                        </div>
+                        <div class="contact-support">
+                            <h4>هل تحتاج إلى مزيد من المساعدة؟</h4>
+                            <p><i class="fas fa-envelope"></i> البريد الإلكتروني: support@example.com</p>
+                            <p><i class="fas fa-phone"></i> الهاتف: +964 770 987 6543</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="form-overlay" id="full-day-request-form-overlay">
+        <div class="form-container">
+            <div class="form-header">
+                <h3>تقديم طلب إجازة يوم كامل</h3>
+                <button class="close-form-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="full-day-request-form">
+                <div class="form-group">
+                    <label for="full-day-start-date">تاريخ بداية الإجازة:</label>
+                    <input type="date" id="full-day-start-date" name="startDate" required>
+                    <div class="error-message">الرجاء إدخال تاريخ بداية الإجازة.</div>
+                </div>
+                <div class="form-group">
+                    <label for="full-day-end-date">تاريخ نهاية الإجازة:</label>
+                    <input type="date" id="full-day-end-date" name="endDate" required>
+                    <div class="error-message">الرجاء إدخال تاريخ نهاية الإجازة.</div>
+                    <div class="error-message" id="full-day-date-range-error" style="display:none;">تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية.</div>
+                </div>
+                <div class="form-group">
+                    <label for="full-day-request-type">نوع الإجازة:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="fullDayRequestType" value="annual" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">سنوية</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="fullDayRequestType" value="sick">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">مرضية</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="fullDayRequestType" value="emergency">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">طارئة</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="fullDayRequestType" value="unpaid">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">بدون راتب</span>
+                        </label>
+                    </div>
+                    <div class="error-message">الرجاء اختيار نوع الإجازة.</div>
+                </div>
+                <div class="form-group">
+                    <label for="full-day-request-description">ملاحظات إضافية (اختياري):</label>
+                    <textarea id="full-day-request-description" name="requestDescription" rows="4" placeholder="اذكر أي تفاصيل أو أسباب إضافية للإجازة..." ></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-form-btn">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="form-overlay" id="part-time-request-form-overlay">
+        <div class="form-container">
+            <div class="form-header">
+                <h3>تقديم طلب إجازة جزئية</h3>
+                <button class="close-form-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="part-time-request-form">
+                <div class="form-group">
+                    <label for="part-time-date">التاريخ:</label>
+                    <input type="date" id="part-time-date" name="requestDate" required>
+                    <div class="error-message">الرجاء إدخال التاريخ.</div>
+                </div>
+                <div class="form-group">
+                    <label for="part-time-start-time">وقت البدء:</label>
+                    <input type="time" id="part-time-start-time" name="startTime" required>
+                    <div class="error-message">الرجاء إدخال وقت البدء.</div>
+                </div>
+                <div class="form-group">
+                    <label for="part-time-end-time">وقت الانتهاء:</label>
+                    <input type="time" id="part-time-end-time" name="endTime" required>
+                    <div class="error-message">الرجاء إدخال وقت الانتهاء.</div>
+                    <div class="error-message" id="part-time-time-range-error" style="display:none;">وقت الانتهاء يجب أن يكون بعد وقت البدء.</div>
+                </div>
+                <div class="form-group">
+                    <label for="part-time-reason">السبب (اختياري):</label>
+                    <textarea id="part-time-reason" name="reason" rows="3" placeholder="اذكر سبب الإجازة الجزئية..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-form-btn">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Ensure jsPDF and html2canvas are loaded before this script runs, if not using defer
+        // Or if using defer, move the script tags for jsPDF and html2canvas to the head
+        // window.jsPDF = window.jspdf.jsPDF; // For new jsPDF versions
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.querySelector('.sidebar');
+            const menuToggleBtn = document.querySelector('.menu-toggle-btn');
+            const closeSidebarBtn = document.querySelector('.close-sidebar-btn');
+            const sidebarOverlay = document.querySelector('.sidebar-overlay');
+            const navLinks = document.querySelectorAll('.sidebar-menu a');
+            const logoutBtn = document.querySelector('.logout-btn'); // Get logout button
+            const contentSections = document.querySelectorAll('.content-section');
+            const mainTitle = document.querySelector('.mainTile');
+
+            // Request Form Elements (Full Day)
+            const openFullDayRequestFormBtn = document.getElementById('open-full-day-request-form-btn');
+            const fullDayRequestFormOverlay = document.getElementById('full-day-request-form-overlay');
+            const fullDayRequestForm = document.getElementById('full-day-request-form');
+            const fullDayStartDateInput = document.getElementById('full-day-start-date');
+            const fullDayEndDateInput = document.getElementById('full-day-end-date');
+            const fullDayDateRangeError = document.getElementById('full-day-date-range-error');
+
+            // Request Form Elements (Part Time)
+            const openPartTimeRequestFormBtn = document.getElementById('open-part-time-request-form-btn');
+            const partTimeRequestFormOverlay = document.getElementById('part-time-request-form-overlay');
+            const partTimeRequestForm = document.getElementById('part-time-request-form');
+            const partTimeDateInput = document.getElementById('part-time-date');
+            const partTimeStartTimeInput = document.getElementById('part-time-start-time');
+            const partTimeEndTimeInput = document.getElementById('part-time-end-time');
+            const partTimeTimeRangeError = document.getElementById('part-time-time-range-error');
+
+
+            const closeFormBtns = document.querySelectorAll('.close-form-btn'); // For both forms
+
+            // Apply Filter Button
+            const applyFilterBtn = document.getElementById('apply-filter-btn');
+            const statusFilter = document.getElementById('status-filter');
+            const requestsTableBody = document.querySelector('.requests-table tbody');
+            const allRequestRows = requestsTableBody ? Array.from(requestsTableBody.querySelectorAll('tr')) : [];
+
+            // PDF Export Button
+            const exportRequestsPdfBtn = document.getElementById('export-requests-pdf-btn');
+
+
+            // Toggle sidebar functionality
+            function toggleSidebar() {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('visible');
+            }
+
+            menuToggleBtn.addEventListener('click', toggleSidebar);
+            closeSidebarBtn.addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', toggleSidebar);
+
+            // Close sidebar if click is inside sidebar but not on a menu item or logout button
+            sidebar.addEventListener('click', (e) => {
+                const isMenuItem = e.target.closest('.sidebar-menu a');
+                const isLogoutButton = e.target.closest('.logout-btn');
+                
+                // Check if sidebar is open and click is not on a menu item or logout button
+                if (sidebar.classList.contains('open') && !isMenuItem && !isLogoutButton && window.innerWidth < 992) {
+                    toggleSidebar();
+                }
+            });
+
+
+            // Navigation and Content Switching
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    closeAllOptionMenus(); // Close any open options menus
+                    closeAllForms(); // Close any open forms
+
+                    navLinks.forEach(nav => nav.classList.remove('active'));
+                    contentSections.forEach(section => section.classList.remove('active'));
+
+                    link.classList.add('active');
+
+                    const targetSectionId = link.dataset.section;
+                    const targetSection = document.getElementById(targetSectionId);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                        mainTitle.textContent = link.textContent.trim();
+                    }
+
+                    // Always close sidebar after clicking a menu item on mobile
+                    if (window.innerWidth < 992) {
+                        toggleSidebar();
+                    }
+                });
+            });
+            
+            // Handle logout button click to close sidebar on mobile
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    if (window.innerWidth < 992) {
+                        toggleSidebar();
+                    }
+                });
+            }
+
+
+            // Set initial active section and title on page load
+            const initialActiveLink = document.querySelector('.sidebar-menu a.active');
+            if (initialActiveLink) {
+                const initialSectionId = initialActiveLink.dataset.section;
+                const initialSection = document.getElementById(initialSectionId);
+                if (initialSection) {
+                    initialSection.classList.add('active');
+                    mainTitle.textContent = initialActiveLink.textContent.trim();
+                }
+            }
+
+            // --- Form Management (General) ---
+            function closeAllForms() {
+                fullDayRequestFormOverlay.classList.remove('visible');
+                partTimeRequestFormOverlay.classList.remove('visible');
+                fullDayRequestForm.reset();
+                partTimeRequestForm.reset();
+                // Clear all error messages for both forms
+                document.querySelectorAll('.form-group.error').forEach(group => {
+                    group.classList.remove('error');
+                });
+                fullDayDateRangeError.style.display = 'none';
+                partTimeTimeRangeError.style.display = 'none';
+            }
+
+            closeFormBtns.forEach(btn => {
+                btn.addEventListener('click', closeAllForms);
+            });
+
+            // Close form when clicking outside the container
+            document.querySelectorAll('.form-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        closeAllForms();
+                    }
+                });
+            });
+
+            // --- Full Day Off Request Form Functionality ---
+            openFullDayRequestFormBtn.addEventListener('click', () => {
+                closeAllForms(); // Close any other open forms first
+                fullDayRequestFormOverlay.classList.add('visible');
+                closeAllOptionMenus(); // Close any open option menus
+
+                const today = new Date().toISOString().split('T')[0];
+                fullDayStartDateInput.min = today;
+                fullDayEndDateInput.min = today;
+            });
+
+            fullDayStartDateInput.addEventListener('change', () => {
+                fullDayEndDateInput.min = fullDayStartDateInput.value;
+                if (fullDayEndDateInput.value && new Date(fullDayEndDateInput.value) < new Date(fullDayStartDateInput.value)) {
+                    fullDayEndDateInput.value = '';
+                }
+            });
+
+            fullDayRequestForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                let isValid = true;
+
+                document.querySelectorAll('#full-day-request-form .form-group.error').forEach(group => {
+                    group.classList.remove('error');
+                });
+                fullDayDateRangeError.style.display = 'none';
+
+                if (!fullDayStartDateInput.value) {
+                    fullDayStartDateInput.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                if (!fullDayEndDateInput.value) {
+                    fullDayEndDateInput.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                if (fullDayStartDateInput.value && fullDayEndDateInput.value) {
+                    const start = new Date(fullDayStartDateInput.value);
+                    const end = new Date(fullDayEndDateInput.value);
+                    start.setHours(0,0,0,0);
+                    end.setHours(0,0,0,0);
+
+                    if (start > end) {
+                        fullDayEndDateInput.closest('.form-group').classList.add('error');
+                        fullDayDateRangeError.style.display = 'block';
+                        isValid = false;
+                    }
+                }
+
+                const requestTypeRadios = document.querySelectorAll('input[name="fullDayRequestType"]');
+                const isRadioChecked = Array.from(requestTypeRadios).some(radio => radio.checked);
+                if (!isRadioChecked) {
+                    requestTypeRadios[0].closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    alert('تم إرسال طلب إجازة يوم كامل بنجاح!');
+                    console.log('Full Day Off Request Data:', {
+                        startDate: fullDayStartDateInput.value,
+                        endDate: fullDayEndDateInput.value,
+                        type: document.querySelector('input[name="fullDayRequestType"]:checked').value,
+                        description: document.getElementById('full-day-request-description').value.trim()
+                    });
+                    closeAllForms();
+                }
+            });
+
+            // --- Part Time Off Request Form Functionality ---
+            openPartTimeRequestFormBtn.addEventListener('click', () => {
+                closeAllForms(); // Close any other open forms first
+                partTimeRequestFormOverlay.classList.add('visible');
+                closeAllOptionMenus(); // Close any open option menus
+
+                const today = new Date().toISOString().split('T')[0];
+                partTimeDateInput.min = today;
+            });
+
+            partTimeRequestForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                let isValid = true;
+
+                document.querySelectorAll('#part-time-request-form .form-group.error').forEach(group => {
+                    group.classList.remove('error');
+                });
+                partTimeTimeRangeError.style.display = 'none';
+
+                if (!partTimeDateInput.value) {
+                    partTimeDateInput.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+                if (!partTimeStartTimeInput.value) {
+                    partTimeStartTimeInput.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+                if (!partTimeEndTimeInput.value) {
+                    partTimeEndTimeInput.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                if (partTimeStartTimeInput.value && partTimeEndTimeInput.value) {
+                    const start = partTimeStartTimeInput.value;
+                    const end = partTimeEndTimeInput.value;
+
+                    if (start >= end) { // Use >= if a zero-duration request isn't allowed, or > for strictly after
+                        partTimeEndTimeInput.closest('.form-group').classList.add('error');
+                        partTimeTimeRangeError.style.display = 'block';
+                        isValid = false;
+                    }
+                }
+
+                if (isValid) {
+                    alert('تم إرسال طلب إجازة جزئية بنجاح!');
+                    console.log('Part Time Off Request Data:', {
+                        date: partTimeDateInput.value,
+                        startTime: partTimeStartTimeInput.value,
+                        endTime: partTimeEndTimeInput.value,
+                        reason: document.getElementById('part-time-reason').value.trim()
+                    });
+                    closeAllForms();
+                }
+            });
+
+            // --- Request Options (Kebab Menu) Functionality ---
+
+            function closeAllOptionMenus() {
+                document.querySelectorAll('.options-menu.show').forEach(menu => {
+                    const originalParentId = menu.dataset.parentId;
+                    const originalParent = document.getElementById(originalParentId);
+
+                    if (originalParent) {
+                        const actionsCell = originalParent.querySelector('.actions-cell');
+                        if (actionsCell) {
+                            actionsCell.appendChild(menu);
+                        }
+                    }
+                    menu.classList.remove('show');
+                    menu.style.top = '';
+                    menu.style.right = '';
+                    menu.style.left = '';
+                    menu.style.zIndex = '';
+                });
+            }
+
+            document.querySelectorAll('.options-button').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation(); // Prevent document click from closing immediately
+
+                    const menu = event.currentTarget.nextElementSibling;
+                    const buttonRect = event.currentTarget.getBoundingClientRect();
+                    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+                    const scrollY = window.scrollY || document.documentElement.scrollTop;
+
+                    document.querySelectorAll('.options-menu.show').forEach(openMenu => {
+                        if (openMenu !== menu) {
+                            closeAllOptionMenus();
+                        }
+                    });
+
+                    if (menu.classList.contains('show')) {
+                        closeAllOptionMenus();
+                        return;
+                    }
+
+                    document.body.appendChild(menu); // Move menu to body to ensure it's on top
+
+                    // Calculate position for RTL
+                    let menuRight = window.innerWidth - (buttonRect.right + scrollX);
+                    let menuTop = buttonRect.bottom + scrollY + 5;
+
+                    const menuWidth = menu.offsetWidth;
+                    // Adjust if menu would go off screen left (for RTL)
+                    if ((buttonRect.left + scrollX) < menuWidth) {
+                        menuRight = window.innerWidth - (buttonRect.right + scrollX); // Re-calculate or use left: 0 relative to cell
+                    }
+
+                    menu.style.position = 'absolute';
+                    menu.style.top = `${menuTop}px`;
+                    menu.style.right = `${menuRight}px`;
+                    menu.style.left = 'auto'; // Ensure left is auto for right positioning
+                    menu.style.zIndex = '10000';
+
+                    menu.classList.add('show');
+                });
+            });
+
+            // Close all menus if click outside any menu or options button
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.options-menu') && !event.target.closest('.options-button')) {
+                    closeAllOptionMenus();
+                }
+            });
+
+
+            document.querySelectorAll('.edit-request-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const menu = event.target.closest('.options-menu');
+                    const originalParentId = menu ? menu.dataset.parentId : null;
+                    const originalParentRow = originalParentId ? document.getElementById(originalParentId) : null;
+                    const requestId = originalParentRow ? originalParentRow.querySelector('td:first-child').textContent : 'N/A';
+
+                    alert('سيتم تعديل الطلب رقم: ' + requestId);
+                    closeAllOptionMenus();
+                });
+            });
+
+            document.querySelectorAll('.delete-request-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const menu = event.target.closest('.options-menu');
+                    const originalParentId = menu ? menu.dataset.parentId : null;
+                    const originalParentRow = originalParentId ? document.getElementById(originalParentId) : null;
+                    const requestId = originalParentRow ? originalParentRow.querySelector('td:first-child').textContent : 'N/A';
+
+                    if (confirm('هل أنت متأكد من حذف الطلب رقم: ' + requestId + '؟')) {
+                        alert('تم حذف الطلب رقم: ' + requestId);
+                        if (originalParentRow) {
+                            originalParentRow.remove();
+                        }
+                    }
+                    closeAllOptionMenus();
+                });
+            });
+
+            // --- Apply Filter Button Functionality ---
+            if (applyFilterBtn) {
+                applyFilterBtn.addEventListener('click', () => {
+                    const selectedStatus = statusFilter.value;
+                    filterRequestsTable(selectedStatus);
+                });
+            }
+
+            function filterRequestsTable(status) {
+                if (!requestsTableBody || allRequestRows.length === 0) return;
+
+                allRequestRows.forEach(row => {
+                    const statusBadge = row.querySelector('.status-badge');
+                    if (statusBadge) {
+                        const rowStatusText = statusBadge.textContent.trim();
+                        let englishStatus = '';
+                        switch (rowStatusText) {
+                            case 'قيد الانتظار': englishStatus = 'pending'; break;
+                            case 'معتمد': englishStatus = 'approved'; break;
+                            case 'مرفوض': englishStatus = 'rejected'; break;
+                            default: englishStatus = '';
+                        }
+
+                        if (status === 'all' || englishStatus === status) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+                });
+                closeAllOptionMenus();
+            }
+
+            // --- PDF Export Functionality ---
+            if (exportRequestsPdfBtn) {
+                exportRequestsPdfBtn.addEventListener('click', () => {
+                    const table = document.getElementById('requests-table');
+                    if (!table) {
+                        alert('Table not found for export.');
+                        return;
+                    }
+
+                    // Temporarily hide the "خيارات" column before generating PDF
+                    const optionsHeader = table.querySelector('th:last-child');
+                    const optionsCells = table.querySelectorAll('td:last-child');
+                    optionsHeader.style.display = 'none';
+                    optionsCells.forEach(cell => cell.style.display = 'none');
+
+                    const options = {
+                        scale: 2,
+                        useCORS: true,
+                        onrendered: function(canvas) {
+                            optionsHeader.style.display = '';
+                            optionsCells.forEach(cell => cell.style.display = '');
+                        },
+                        foreignObjectRendering: true
+                    };
+
+
+                    html2canvas(table, options).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = 210;
+                        const pageHeight = 297;
+                        const imgHeight = canvas.height * imgWidth / canvas.width;
+                        let heightLeft = imgHeight;
+
+                        const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                        let position = 0;
+
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+
+                        while (heightLeft >= 0) {
+                            position = heightLeft - imgHeight;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                            heightLeft -= pageHeight;
+                        }
+
+                        pdf.setR2L(true);
+
+                        pdf.save('طلباتي.pdf');
+                    }).catch(error => {
+                        console.error("Error generating PDF:", error);
+                        alert("فشل في توليد ملف PDF. الرجاء المحاولة مرة أخرى.");
+                        optionsHeader.style.display = '';
+                        optionsCells.forEach(cell => cell.style.display = '');
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

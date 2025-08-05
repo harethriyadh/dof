@@ -34,24 +34,24 @@ export default function MyQuests() {
   };
 
   return (
-    <div className="requests-container">
+    <div className="requests-container" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
       <h2>طلباتي</h2>
-      <div className="filters">
+      <div className="filters" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
         <div className="filter-group">
-          <label htmlFor="status-filter">حالة الطلب:</label>
-          <select id="status-filter" className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <label htmlFor="status-filter" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>حالة الطلب:</label>
+          <select id="status-filter" className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
             <option value="all">الكل</option>
             <option value="pending">قيد الانتظار</option>
             <option value="approved">معتمد</option>
             <option value="rejected">مرفوض</option>
           </select>
         </div>
-        <button className="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn" onClick={handleExportPDF}>
+        <button className="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn" onClick={handleExportPDF} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
           <i className="fas fa-file-pdf"></i> تصدير كـ PDF
         </button>
       </div>
       <div className="table-responsive-wrapper">
-        <table className="requests-table" id="requests-table">
+        <table className="requests-table" id="requests-table" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
           <thead>
             <tr>
               <th>رقم الطلب</th>
@@ -63,7 +63,7 @@ export default function MyQuests() {
           </thead>
           <tbody>
             {filteredRequests.map((r, idx) => (
-              <tr key={r.id} id={`request-row-${r.id.replace('#','')}`}>
+              <tr key={r.id} id={`request-row-${r.id.replace('#','')}`} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
                 <td>{r.id}</td>
                 <td>{r.date}</td>
                 <td>{r.desc}</td>

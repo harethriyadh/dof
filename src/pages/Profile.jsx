@@ -25,17 +25,15 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      <div className="profile-card available-balance-card">
+      <div className="profile-card available-balance-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
         <div className="card-content">
-          <h3>الرصيد المتاح</h3>
+          <h3 style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>الرصيد المتاح</h3>
           <div className="balance-indicators">
-            <p>
-              أيام الإجازة:{" "}
-              <span className="balance-value">20 يوم</span>
+            <p style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+              أيام الإجازة: <span className="balance-value">20 يوم</span>
             </p>
-            <p>
-              ساعات الإجازة:{" "}
-              <span className="balance-value">160 ساعة</span>
+            <p style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+              ساعات الإجازة: <span className="balance-value">160 ساعة</span>
             </p>
           </div>
         </div>

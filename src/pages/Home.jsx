@@ -81,8 +81,36 @@ export default function Home({ onOpenFullDayModal, onOpenPartTimeModal }) {
           </button>
         </div>
       </div>
-      <div className="card status-combined-card" style={{ width: '100%', maxWidth: 420, fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", background: '#fff', borderRadius: 12, boxShadow: '0 8px 25px rgba(0,0,0,0.1)', border: '1px solid #e0e0e0', overflow: 'hidden', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center' }}>
-        <div className="card-header" style={{ padding: '1.5rem', textAlign: 'center', background: '#f9f9f9', borderBottom: '1px solid #e0e0e0' }}>
+      {/* الاجازات المتـــاحة summary card moved from Profile.jsx, now placed directly under حالة آخر طلب, now full width */}
+      <div className="card summary-card" style={{
+        fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif",
+        gridColumn: '1/-1',
+        width: '100%',
+        marginBottom: '2rem',
+        background: 'linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%)',
+        minHeight: 120,
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderRadius: '12px',
+        boxShadow: '0 4px 24px rgba(32,107,196,0.08)',
+        gap: 0
+      }}>
+        <div style={{ flex: 1, textAlign: 'center', borderLeft: '1px solid #e0e0e0' }}>
+          <div className="summary-main-value" style={{ color: '#206bc4', marginBottom: 8, textShadow: '0 2px 8px #b6d0f7' }}>الاجازات المتـــاحة</div>
+        </div>
+        <div style={{ flex: 1, textAlign: 'center', borderLeft: '1px solid #e0e0e0' }}>
+          <div className="summary-main-value" style={{ color: '#16834b', marginBottom: 8 }}>20 <span style={{ fontSize: 18, fontWeight: 600, color: '#444' }}>يوم</span></div>
+          <div className="summary-label">أيام الإجازة</div>
+        </div>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div className="summary-main-value" style={{ color: '#f59f00', marginBottom: 8 }}>160 <span style={{ fontSize: 18, fontWeight: 600, color: '#444' }}>ساعة</span></div>
+          <div className="summary-label">ساعات الإجازة</div>
+        </div>
+      </div>
+      <div className="card status-combined-card" style={{ width: '100%', maxWidth: '100%', minWidth: 0, fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", background: '#fff', borderRadius: 12, boxShadow: '0 8px 25px rgba(0,0,0,0.1)', overflow: 'hidden', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center' }}>
+        <div className="card-header" style={{ padding: '1.5rem', textAlign: 'center', background: '#f9f9f9' }}>
           <h3 className="card-title" style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#333' }}>حالة الطلبات</h3>
         </div>
         <div className="card-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -109,7 +137,7 @@ export default function Home({ onOpenFullDayModal, onOpenPartTimeModal }) {
           </div>
         </div>
       </div>
-      <div className="card new-request-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="card new-request-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", width: '100%', maxWidth: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div className="card-content">
           <h3 style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>إنشاء طلب جديد</h3>
           <button
@@ -131,19 +159,19 @@ export default function Home({ onOpenFullDayModal, onOpenPartTimeModal }) {
         </div>
       </div>
       {/* Redesigned summary cards */}
-      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #e3f0ff 0%, #f8f9fe 100%)', width: '100%', maxWidth: 420 }}>
+      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #e3f0ff 0%, #f8f9fe 100%)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
         <div style={{ textAlign: 'center', width: '100%' }}>
           <div style={{ fontSize: 54, fontWeight: 900, color: '#206bc4', lineHeight: 1, letterSpacing: '0.01em', marginBottom: 8, textShadow: '0 2px 8px #b6d0f7' }}>19</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: '#444', letterSpacing: '0.01em' }}>إجمالي الطلبات</div>
         </div>
       </div>
-      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #e3ffe6 0%, #f8f9fe 100%)', width: '100%', maxWidth: 420 }}>
+      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #e3ffe6 0%, #f8f9fe 100%)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
         <div style={{ textAlign: 'center', width: '100%' }}>
           <div style={{ fontSize: 54, fontWeight: 900, color: '#16834b', lineHeight: 1, letterSpacing: '0.01em', marginBottom: 8, textShadow: '0 2px 8px #b6f7d0' }}>20</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: '#444', letterSpacing: '0.01em' }}>الأيام المتاحة</div>
         </div>
       </div>
-      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%)', width: '100%', maxWidth: 420 }}>
+      <div className="card summary-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 140, boxShadow: '0 4px 24px rgba(32,107,196,0.08)', border: 'none', margin: '0 auto', background: 'linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
         <div style={{ textAlign: 'center', width: '100%' }}>
           <div style={{ fontSize: 54, fontWeight: 900, color: '#f59f00', lineHeight: 1, letterSpacing: '0.01em', marginBottom: 8, textShadow: '0 2px 8px #f7e7b6' }}>160</div>
           <div style={{ fontSize: 20, fontWeight: 600, color: '#444', letterSpacing: '0.01em' }}>الساعات المتاحة</div>

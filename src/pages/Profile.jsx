@@ -4,6 +4,7 @@ export default function Profile() {
   return (
     <div className="profile-container">
       <h2>الملف الشخصي</h2>
+      {/* User info card */}
       <div className="profile-card">
         <div className="profile-avatar">
           <i className="fas fa-user-circle"></i>
@@ -22,19 +23,6 @@ export default function Profile() {
           </div>
           <div className="detail-item">
             <span className="detail-label">تاريخ الانضمام:</span> 2020-01-15
-          </div>
-        </div>
-      </div>
-      <div className="profile-card available-balance-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
-        <div className="card-content">
-          <h3 style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>الرصيد المتاح</h3>
-          <div className="balance-indicators">
-            <p style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
-              أيام الإجازة: <span className="balance-value">20 يوم</span>
-            </p>
-            <p style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
-              ساعات الإجازة: <span className="balance-value">160 ساعة</span>
-            </p>
           </div>
         </div>
       </div>

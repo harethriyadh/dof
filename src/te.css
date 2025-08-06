@@ -1040,6 +1040,7 @@ textarea {
 
     .main-content {
         padding-top: 2rem;
+        width: 100%;
     }
 
     .main-header {
@@ -1076,20 +1077,27 @@ textarea {
     }
 }
 
-/* Mobile layout (< 992px) */
+/* Mobile layout (< 992px) - Sidebar overlays content, toggled by hamburger */
 @media (max-width: 991px) {
     .sidebar {
+        position: fixed;
         right: -280px;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        border-left: 1px solid var(--border-color);
+        z-index: 1002;
+        transition: right 0.3s ease;
+        display: flex;
+        flex-direction: column;
     }
-
     .sidebar.open {
         right: 0;
     }
-
     .close-sidebar-btn {
         display: block;
     }
-
     .menu-toggle-btn {
         display: flex;
         position: fixed;
@@ -1097,11 +1105,13 @@ textarea {
         right: 15px;
         z-index: 1001;
     }
-
+    .sidebar-overlay {
+        display: block;
+    }
     .main-content {
         padding-top: calc(70px + 1.5rem);
+        width: 100%;
     }
-
     .main-header {
         position: fixed;
         width: 100%;
@@ -1115,13 +1125,11 @@ textarea {
         justify-content: space-between;
         flex-direction: row-reverse;
     }
-
     .main-header h1 {
         height: auto;
         margin-top: 0;
         padding-right: 0;
     }
-
     .cards-section {
         grid-template-columns: 1fr;
     }
@@ -1169,6 +1177,7 @@ textarea {
   .requests-container {
     overflow-x: auto;
     padding: 0.5rem;
+    border: #1652a2 1px solid;
   }
   .requests-table {
     min-width: 600px;
@@ -1188,10 +1197,7 @@ textarea {
 }
 
 @media (max-width: 480px) {
-    .sidebar {
-        width: 90%;
-        right: -90%;
-    }
+    
     .sidebar.open {
         right: 0;
     }
@@ -1199,6 +1205,7 @@ textarea {
     .main-content {
         padding: 1rem;
         padding-top: calc(70px + 1rem);
+        width: 100%;
     }
 }
 
@@ -1212,6 +1219,7 @@ textarea {
 
 /* --- Responsive Requests Table (طلباتي) --- */
 .requests-container {
+  width: 100%;
   overflow-x: auto;
   padding: 1.5rem;
   background: var(--card-bg);
@@ -1255,30 +1263,6 @@ textarea {
 .requests-table td {
   color: #555;
 }
-@media (max-width: 1100px) {
-  .dashboard-container {
-    grid-template-columns: 1fr !important;
-  }
-  .sidebar {
-    position: fixed;
-    right: 0;
-    width: 80vw;
-    max-width: 320px;
-    z-index: 1002;
-    height: 100vh;
-    box-shadow: 0 0 20px rgba(0,0,0,0.12);
-    background: #fff;
-    border-left: 1px solid var(--border-color);
-    transition: right 0.3s;
-  }
-  .sidebar:not(.open) {
-    right: -100vw;
-  }
-  .main-content {
-    padding: 1rem;
-    padding-top: 80px;
-  }
-}
 @media (max-width: 900px) {
   .requests-table th,
   .requests-table td {
@@ -1305,6 +1289,9 @@ textarea {
     overflow-x: auto;
     padding: 0.2rem;
   }
+  .table-responsive-wrapper {
+    overflow-x: auto;
+  }
   .requests-table {
     min-width: 500px;
     font-size: 0.92em;
@@ -1324,3 +1311,38 @@ textarea {
 }
 
 /* --- End Responsive Requests Table --- */
+
+/* Responsive font size for Profile summary card */
+.summary-card .summary-main-value {
+  font-size: 54px;
+  font-weight: 900;
+  line-height: 1;
+}
+.summary-card .summary-label {
+  font-size: 20px;
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .summary-card .summary-main-value {
+    font-size: 40px;
+  }
+  .summary-card .summary-label {
+    font-size: 17px;
+  }
+}
+@media (max-width: 600px) {
+  .summary-card .summary-main-value {
+    font-size: 28px;
+  }
+  .summary-card .summary-label {
+    font-size: 15px;
+  }
+}
+@media (max-width: 400px) {
+  .summary-card .summary-main-value {
+    font-size: 20px;
+  }
+  .summary-card .summary-label {
+    font-size: 12px;
+  }
+}

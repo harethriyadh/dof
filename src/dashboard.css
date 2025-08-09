@@ -253,6 +253,7 @@ body {
 }
 
 .mainTile {
+    text-align: center;
 }
 
 /* --- Form Styling (Modal/Overlay) --- */

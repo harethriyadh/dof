@@ -1,9 +1,11 @@
 import React from "react";
+import '../Help.css'; // Assuming you have a CSS file for styling
+
 
 export default function Help() {
   return (
     <div className="help-container" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
-      <h2>المساعدة</h2>
+      {/* <h2>المساعدة</h2> Removed duplicate title */}
       <div className="help-card" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
         <div className="faq-item">
           <h3 style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>كيف يمكنني تقديم طلب جديد؟</h3>

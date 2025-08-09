@@ -1,0 +1,104 @@
+/* Help.css - Clean White Theme */
+
+/* --- Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Cairo:wght@400;500;700&display=swap');
+
+/* --- General & Layout --- */
+.help-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2.5rem;
+  font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+  background-color: #f1f3f4; /* A nice, soft white background */
+  direction: rtl;
+  text-align: right;
+  color: #202124; /* Dark text for high contrast */
+  overflow: hidden;
+}
+
+/* --- Help Card --- */
+.help-card {
+  background: #ffffff;
+  border-radius: 12px;
+  /* A subtle, professional box shadow */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 600px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* --- FAQ Item Styles --- */
+.faq-item {
+  border-bottom: 1px solid #dadce0;
+  padding-bottom: 1.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.faq-item:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.faq-item h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #202124;
+  margin: 0 0 0.5rem 0;
+}
+
+.faq-item p {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #5f6368;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* --- Contact Support Styles --- */
+.contact-support {
+  padding-top: 1rem;
+}
+
+.contact-support h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #202124;
+  margin: 0 0 0.5rem 0;
+}
+
+.contact-support p {
+  font-size: 1rem;
+  color: #5f6368;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.contact-support .fas {
+  margin-left: 0.5rem;
+  color: #1a73e8; /* Google's signature blue for icons */
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 600px) {
+  .help-container {
+    padding: 1.5rem;
+  }
+  .help-card {
+    padding: 1.5rem;
+  }
+  .faq-item {
+    padding-bottom: 1rem;
+  }
+  .faq-item h3 {
+    font-size: 1.1rem;
+  }
+  .faq-item p,
+  .contact-support p {
+    font-size: 0.95rem;
+  }
+}

@@ -1,9 +1,9 @@
 import React from "react";
-
+import '../Profile.css'; // Assuming you have a CSS file for styling
 export default function Profile() {
   return (
     <div className="profile-container">
-      <h2>الملف الشخصي</h2>
+      {/* <h2>الملف الشخصي</h2> Removed duplicate title */}
       {/* User info card */}
       <div className="profile-card">
         <div className="profile-avatar">
@@ -12,8 +12,7 @@ export default function Profile() {
         <h3>اسم المستخدم: أحمد محمد</h3>
         <div className="profile-details">
           <div className="detail-item">
-            <span className="detail-label">البريد الإلكتروني:</span>{" "}
-            ahmed.mohamed@example.com
+            <span className="detail-label">البريد الإلكتروني:</span> ahmed.mohamed@example.com
           </div>
           <div className="detail-item">
             <span className="detail-label">الهاتف:</span> +964 770 123 4567

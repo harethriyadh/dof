@@ -1,0 +1,10 @@
+/* Navbar.jsx related styles */
+.navbar {
+  background: #1976d2;
+  color: #fff;
+  padding: 12px 24px;
+}
+.navbar-title {
+  margin: 0;
+  font-size: 24px;
+}

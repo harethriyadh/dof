@@ -1,3 +1,11 @@
+/* Card hover effect for all cards */
+
+/* Reusable card hover effect for all cards */
+.card-hover {
+  box-shadow: 0 4px 24px rgba(32,107,196,0.08);
+  transition: box-shadow 0.3s ease;
+  will-change: box-shadow;
+}
 .logo {
   height: 6em;
   padding: 1.5em;

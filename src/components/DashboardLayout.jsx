@@ -3,6 +3,7 @@ import Home from "../pages/Home";
 import AllRequests from "../pages/AllRequests";
 import Profile from "../pages/Profile";
 import Help from "../pages/Help";
+import "../dashboard.css"; // Import the CSS for the layout
 
 const sectionTitles = {
   dashboard: "الرئيسية",
@@ -62,7 +63,7 @@ export default function DashboardLayout() {
           <a href="#" className="logout-btn"><i className="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
         </div>
       </aside>
-      {sidebarOpen && <div className="sidebar-overlay visible" style={{ zIndex: 1001 }} onClick={() => setSidebarOpen(false)}></div>}
+      {sidebarOpen && <div className="sidebar-overlay visible" style={{  zIndex: 1001 }} onClick={() => setSidebarOpen(false)}></div>}
       <main className="main-content" style={{ zIndex: 1 }}>
         <header className="main-header">
           <button className="menu-toggle-btn" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><i className="fas fa-bars"></i></button>

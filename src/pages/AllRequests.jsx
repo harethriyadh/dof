@@ -1,4 +1,5 @@
 import React from "react";
+import "../AllRequests.css"; // Import the CSS file
 
 export default function MyQuests() {
   const [statusFilter, setStatusFilter] = React.useState('all');
@@ -34,24 +35,57 @@ export default function MyQuests() {
   };
 
   return (
-    <div className="requests-container" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
-      <h2>طلباتي</h2>
-      <div className="filters" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+    <div className="requests-container">
+      {/* Summary cards from Home.jsx, above the table */}
+      <div className="summary-cards-grid">
+        {/* Approved */}
+        <div className="card summary-card summary-card-approved">
+          <div className="summary-card-content">
+            <div className="summary-main-value summary-main-value-approved">19</div>
+            <div className="summary-label">
+              الطلبات المعتمدة
+            </div>
+          </div>
+        </div>
+
+        {/* Pending */}
+        <div className="card summary-card summary-card-pending">
+          <div className="summary-card-content">
+            <div className="summary-main-value summary-main-value-pending">20</div>
+            <div className="summary-label">
+              الطلبات المعلقة
+            </div>
+          </div>
+        </div>
+
+        {/* Rejected */}
+        <div className="card summary-card summary-card-rejected">
+          <div className="summary-card-content">
+            <div className="summary-main-value summary-main-value-rejected">160</div>
+            <div className="summary-label">
+              الطلبات المرفوضة
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="filters">
         <div className="filter-group">
-          <label htmlFor="status-filter" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>حالة الطلب:</label>
-          <select id="status-filter" className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+          <label htmlFor="status-filter">حالة الطلب:</label>
+          <select id="status-filter" className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="all">الكل</option>
             <option value="pending">قيد الانتظار</option>
             <option value="approved">معتمد</option>
             <option value="rejected">مرفوض</option>
           </select>
         </div>
-        <button className="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn" onClick={handleExportPDF} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+        <button className="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn" onClick={handleExportPDF}>
           <i className="fas fa-file-pdf"></i> تصدير كـ PDF
         </button>
       </div>
+
       <div className="table-responsive-wrapper">
-        <table className="requests-table" id="requests-table" style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+        <table className="requests-table" id="requests-table">
           <thead>
             <tr>
               <th>رقم الطلب</th>
@@ -63,7 +97,7 @@ export default function MyQuests() {
           </thead>
           <tbody>
             {filteredRequests.map((r, idx) => (
-              <tr key={r.id} id={`request-row-${r.id.replace('#','')}`} style={{ fontFamily: "'Tajawal', 'Cairo', Arial, sans-serif" }}>
+              <tr key={r.id} id={`request-row-${r.id.replace('#', '')}`}>
                 <td>{r.id}</td>
                 <td>{r.date}</td>
                 <td>{r.desc}</td>
@@ -72,7 +106,7 @@ export default function MyQuests() {
                   <button className="options-button" aria-label="خيارات الطلب">
                     <i className="fas fa-ellipsis-h"></i>
                   </button>
-                  <ul className="options-menu" data-parent-id={`request-row-${r.id.replace('#','')}`}>
+                  <ul className="options-menu" data-parent-id={`request-row-${r.id.replace('#', '')}`}>
                     <li><a href="#" className="edit-request-btn"><i className="fas fa-edit"></i> تعديل</a></li>
                     <li><a href="#" className="delete-request-btn"><i className="fas fa-trash-alt"></i> حذف</a></li>
                   </ul>

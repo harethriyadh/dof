@@ -1,0 +1,341 @@
+/* Home.css */
+
+/* --- Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800;900&family=Cairo:wght@400;600;700&display=swap');
+
+/* --- Main Layout --- */
+.cards-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    align-items: stretch;
+}
+
+/* --- Card Base Styles --- */
+.card {
+    font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+    border-radius: 12px;
+    box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s ease-in-out;
+    margin-top: 25px ;
+}
+
+.card-hover:hover {
+    box-shadow: 0 0px 20px 0 rgba(90, 90, 90, 0.199)
+}
+
+.card-content {
+    width: 100%;
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1.5rem 0;
+    text-align: center;
+}
+
+/* --- Redesigned Last Request Status Card --- */
+.status-last-request {
+    color: #fff;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem; /* Increased padding for better spacing */
+    cursor: default;
+    color: #fff; /* White text color */
+    margin-bottom: 0;
+    position: relative;
+    overflow: hidden;
+    border: none !important;
+}
+
+/* Correct selector for main border on last request card */
+.card.status-last-request {
+  border: 2px solid #007bff;
+}
+
+
+/* Optional: Add a subtle pattern for flair */
+.status-last-request::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    z-index: 1;
+}
+
+.request-status-title {
+    font-size: 1.5em;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.request-status-message {
+    display: block;
+    font-size: 1.2em;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* --- Summary Card --- */
+.leave-balance-card-three-col {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%);
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    padding: 1rem;
+}
+
+.summary-section {
+    flex: 1 1 0%;
+    text-align: center;
+    padding: 0 1rem;
+}
+
+.summary-section:nth-child(1),
+.summary-section:nth-child(2) {
+    border-left: 1px solid #ddd;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.summary-main-value {
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+
+.leave-balance-title {
+    color: #206bc4;
+    text-shadow: 0 2px 8px #b6d0f7;
+    font-size: 2rem;
+    line-height: 1.5;
+}
+
+.summary-main-value-green {
+    color: #16834b;
+}
+
+.summary-main-value-orange {
+    color: #f59f00;
+}
+
+.summary-label {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #666;
+}
+
+/* --- New Request Card --- */
+.new-request-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.new-request-btn {
+    width: 100%;
+    min-height: 60px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 1.15rem;
+    transition: font-size 0.2s;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.new-request-btn-secondary {
+    margin-top: 1rem;
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.new-request-btn-secondary:hover {
+    background-color: #e2e6ea;
+}
+
+.new-request-btn .icon {
+    margin-left: 6px;
+    font-size: 1.2em;
+}
+
+/* --- Responsive Layout for Mobile and Small Screens --- */
+@media (max-width: 600px) {
+    .cards-section {
+        gap: 1.5rem;
+        padding: 0 1rem;
+    }
+
+    .card-content {
+        padding: 1rem;
+    }
+    
+    .status-last-request {
+        min-height: 90px;
+    }
+
+    .request-status-title {
+        font-size: 1.2em;
+    }
+
+    .request-status-message {
+        font-size: 1em;
+    }
+
+    .leave-balance-card-three-col {
+        flex-direction: column;
+        padding: 1rem 0;
+    }
+
+    .summary-section {
+        padding: 1rem 1.5rem;
+        width: 100%;
+        border-left: none !important;
+    }
+
+    .summary-section:not(:last-child) {
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 1rem;
+    }
+    
+    .summary-main-value {
+        font-size: 1.8rem;
+    }
+    
+    .summary-label {
+        font-size: 0.9rem;
+    }
+    
+    .new-request-btn {
+        min-height: 50px;
+        font-size: 1rem;
+    }
+    
+    .card-title {
+        font-size: 1.25rem;
+    }
+}.card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 1.2rem 1.6rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border: none !important;
+}
+
+.status-last-request {
+  border: none ;;
+}
+
+/* Animated gradient border effect */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 200, 0.7),
+    rgba(0, 150, 255, 0.7),
+    rgba(255, 0, 150, 0.7)
+  );
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  animation: borderFlow 4s linear infinite;
+}
+
+@keyframes borderFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.card-hover:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+}
+
+/* Status-specific colors */
+
+.status-last-request.status-approved {
+  background: linear-gradient(135deg, #008b46 0%, #00af8c 100%);
+}
+
+.status-last-request.status-pending {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+}
+
+.status-last-request.status-rejected {
+  background: linear-gradient(135deg, #f85032 0%, #e73827 100%);
+}
+
+/* Inner content */
+.card-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.request-status-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #ffffffcc;
+  letter-spacing: 0.5px;
+}
+
+.request-status-message {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .card {
+    padding: 1rem;
+  }
+  .request-status-message {
+    font-size: 1.1rem;
+  }
+}

@@ -1,3 +1,22 @@
+/* --- Reusable Summary Card Value/Label Styles --- */
+.summary-card-value {
+    font-size: 54px;
+    font-weight: 900;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    display: block;
+}
+.summary-card-label {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--dark-text);
+    line-height: 1.2;
+    margin-top: 0.5rem;
+    text-align: center;
+    display: block;
+}
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
 
@@ -46,6 +65,7 @@ body {
     min-height: 100vh;
     background-color: var(--light-bg);
     position: relative;
+    border: red 1px solid; /* Temporary border for debugging */
 }
 
 /* --- Sidebar Styling --- */
@@ -796,8 +816,8 @@ textarea {
 
 /* --- Profile Section --- */
 .profile-container {
-    max-width: 800px;
-    margin: 0 auto;
+    width: 100%;
+    margin-top: 2rem;
     display: flex;
     flex-direction: column;
     gap: 2rem; /* Space between profile cards */
@@ -808,6 +828,21 @@ textarea {
     padding: 2rem;
     box-shadow: var(--shadow-light);
     text-align: center;
+}
+/* --- Available Balance Card Custom Font Sizes --- */
+.available-balance-label {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--dark-text);
+    line-height: 1.2;
+    margin-top: 0.5rem;
+}
+.available-balance-value {
+    font-size: 54px;
+    font-weight: 900;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 0.5rem;
 }
 .profile-avatar {
     font-size: 5rem;
@@ -890,8 +925,8 @@ textarea {
 
 /* --- Help Section --- */
 .help-container {
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin-top: 2rem;
 }
 .help-card {
     background: white;
@@ -1028,6 +1063,7 @@ textarea {
     .dashboard-container {
         display: grid;
         grid-template-columns: 280px 1fr;
+        border: red 1px solid; /* Temporary border for debugging */
     }
 
     .sidebar {
@@ -1052,8 +1088,11 @@ textarea {
     }
     .main-header h1 {
         margin-right: auto;
-        margin-left: 0;
+        margin-right: 50px;         /* Right margin */
+        margin-top: 30px;
     }
+
+    
 
     .menu-toggle-btn {
         display: none;

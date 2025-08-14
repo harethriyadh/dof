@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import "../AllRequests.css"; // Import the CSS file
 
 export default function MyQuests() {
-  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   // Filtered requests based on status
   const requests = [
@@ -13,29 +15,67 @@ export default function MyQuests() {
   ];
   const filteredRequests = statusFilter === 'all' ? requests : requests.filter(r => r.status === statusFilter);
 
-  // PDF export handler
-  const handleExportPDF = () => {
-    // Dynamically import jsPDF and html2canvas for client-side PDF export
-    import('jspdf').then(jsPDFModule => {
-      import('html2canvas').then(html2canvas => {
-        const doc = new jsPDFModule.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-        const table = document.getElementById('requests-table');
-        html2canvas.default(table, { scale: 2 }).then(canvas => {
-          const imgData = canvas.toDataURL('image/png');
-          const pageWidth = doc.internal.pageSize.getWidth();
-          const pageHeight = doc.internal.pageSize.getHeight();
-          const imgProps = doc.getImageProperties(imgData);
-          const imgWidth = pageWidth - 40;
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          doc.addImage(imgData, 'PNG', 20, 40, imgWidth, imgHeight);
-          doc.save('requests.pdf');
-        });
+  // PDF export handler with better error handling
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    setExportMessage("");
+
+    try {
+      // Dynamically import jsPDF and html2canvas for client-side PDF export
+      const jsPDFModule = await import('jspdf');
+      const html2canvas = await import('html2canvas');
+      
+      const doc = new jsPDFModule.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      const table = document.getElementById('requests-table');
+      
+      if (!table) {
+        throw new Error('Table not found for export');
+      }
+
+      // Temporarily hide the "خيارات" column before generating PDF
+      const optionsHeader = table.querySelector('th:last-child');
+      const optionsCells = table.querySelectorAll('td:last-child');
+      
+      if (optionsHeader) optionsHeader.style.display = 'none';
+      optionsCells.forEach(cell => cell.style.display = 'none');
+
+      const canvas = await html2canvas.default(table, { 
+        scale: 2,
+        useCORS: true,
+        foreignObjectRendering: true
       });
-    });
+
+      // Restore the hidden columns
+      if (optionsHeader) optionsHeader.style.display = '';
+      optionsCells.forEach(cell => cell.style.display = '');
+
+      const imgData = canvas.toDataURL('image/png');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const imgProps = doc.getImageProperties(imgData);
+      const imgWidth = pageWidth - 40;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      
+      doc.addImage(imgData, 'PNG', 20, 40, imgWidth, imgHeight);
+      doc.save('requests.pdf');
+      
+      setExportMessage("تم تصدير الملف بنجاح!");
+      setTimeout(() => setExportMessage(""), 3000);
+      
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      setExportMessage("فشل في توليد ملف PDF. الرجاء المحاولة مرة أخرى.");
+      setTimeout(() => setExportMessage(""), 5000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <div className="requests-container">
+      <div className="page-header">
+        <h2>إدارة الطلبات</h2>
+        <p>مراجعة ومتابعة جميع طلبات الإجازة</p>
+      </div>
       {/* Summary cards from Home.jsx, above the table */}
       <div className="summary-cards-grid">
         {/* Approved */}
@@ -72,17 +112,34 @@ export default function MyQuests() {
       <div className="filters">
         <div className="filter-group">
           <label htmlFor="status-filter">حالة الطلب:</label>
-          <select id="status-filter" className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <select 
+            id="status-filter" 
+            className="filter-select" 
+            value={statusFilter} 
+            onChange={e => setStatusFilter(e.target.value)}
+          >
             <option value="all">الكل</option>
             <option value="pending">قيد الانتظار</option>
             <option value="approved">معتمد</option>
             <option value="rejected">مرفوض</option>
           </select>
         </div>
-        <button className="btn btn-secondary export-pdf-btn" id="export-requests-pdf-btn" onClick={handleExportPDF}>
-          <i className="fas fa-file-pdf"></i> تصدير كـ PDF
+        <button 
+          className="btn btn-secondary export-pdf-btn" 
+          id="export-requests-pdf-btn" 
+          onClick={handleExportPDF}
+          disabled={isExporting}
+        >
+          <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i> 
+          {isExporting ? "جاري التصدير..." : "تصدير كـ PDF"}
         </button>
       </div>
+
+      {exportMessage && (
+        <div className={`export-message ${exportMessage.includes("فشل") ? "error" : "success"}`}>
+          {exportMessage}
+        </div>
+      )}
 
       <div className="table-responsive-wrapper">
         <table className="requests-table" id="requests-table">
@@ -96,7 +153,7 @@ export default function MyQuests() {
             </tr>
           </thead>
           <tbody>
-            {filteredRequests.map((r, idx) => (
+            {filteredRequests.map((r) => (
               <tr key={r.id} id={`request-row-${r.id.replace('#', '')}`}>
                 <td>{r.id}</td>
                 <td>{r.date}</td>

@@ -65,7 +65,6 @@ body {
     min-height: 100vh;
     background-color: var(--light-bg);
     position: relative;
-    border: red 1px solid; /* Temporary border for debugging */
 }
 
 /* --- Sidebar Styling --- */
@@ -1063,7 +1062,6 @@ textarea {
     .dashboard-container {
         display: grid;
         grid-template-columns: 280px 1fr;
-        border: red 1px solid; /* Temporary border for debugging */
     }
 
     .sidebar {

@@ -4,101 +4,7 @@
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800;900&family=Cairo:wght@400;600;700&display=swap');
 
-/* --- General Layout and Typography --- */
-.requests-container {
-    font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
-    padding: 2rem;
-    background-color: #f8f9fe;
-    min-height: 100vh;
-}
 
-/* --- Summary Cards Section --- */
-.summary-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2rem;
-    align-items: stretch;
-    margin-bottom: 2rem;
-}
-
-.card.summary-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 140px;
-    box-shadow: 0 4px 24px rgba(32, 107, 196, 0.08);
-    border: none;
-    margin: 0 auto;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    border-radius: 12px;
-box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);
-
-}
-
-.card.summary-card:hover {
-    box-shadow: 0 0px 20px 0 rgba(90, 90, 90, 0.199)
-    
-}
-
-.summary-card-approved {
-    background: linear-gradient(135deg, #e3ffe6 0%, #f8f9fe 100%);
-}
-.summary-card-approved:hover {
-    background: linear-gradient(135deg, #c6f7d4 0%, #e3ffe6 100%);
-}
-
-.summary-card-pending {
-    background: linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%);
-}
-.summary-card-pending:hover {
-    background: linear-gradient(135deg, #fff3b0 0%, #fffbe3 100%);
-}
-
-.summary-card-rejected {
-    background: linear-gradient(135deg, #ffe3e3 0%, #f8f9fe 100%);
-}
-.summary-card-rejected:hover {
-    background: linear-gradient(135deg, #ffb6b6 0%, #ffe3e3 100%);
-}
-
-
-.summary-card-content {
-    text-align: center;
-    width: 100%;
-}
-
-.summary-main-value {
-    font-size: 54px;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: 0.01em;
-    margin-bottom: 8px;
-}
-
-.summary-main-value-approved {
-    color: #28a745;
-    text-shadow: 0 2px 8px #b6f7d0;
-}
-
-.summary-main-value-pending {
-    color: #f59f00;
-    text-shadow: 0 2px 8px #f7e7b6;
-}
-
-.summary-main-value-rejected {
-    color: #dc3545;
-    text-shadow: 0 2px 8px #f7b6b6;
-}
-
-.summary-label {
-    font-size: 20px;
-    font-weight: 600;
-    color: #444;
-    letter-spacing: 0.01em;
-}
 
 /* --- Filters Section --- */
 .filters {
@@ -144,8 +50,48 @@ box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);
 
 .btn-secondary:hover {
     background-color: #5a6268;
-    
+}
 
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-secondary:disabled:hover {
+    background-color: #6c757d;
+}
+
+/* --- Export Message Styling --- */
+.export-message {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    text-align: center;
+    animation: slideInDown 0.3s ease-out;
+}
+
+.export-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.export-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- Table Section --- */
@@ -220,7 +166,6 @@ box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);
 
 .options-button:hover {
     color: #343a40;
-    border: #28a745 ;
     box-shadow: 0 2px 20px 0 rgba(110, 110, 110, 0.26);
 }
 
@@ -278,5 +223,21 @@ box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* --- Responsive Design for Page Headers --- */
+@media (max-width: 600px) {
+    .page-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .page-header p {
+        font-size: 1rem;
     }
 }

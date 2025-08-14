@@ -217,11 +217,9 @@ body {
 .dashboard-container {
     display: flex;
     height: 100vh; /* Fixed height to match sidebar */
-    min-height: 100vh; /* Ensure minimum height */
     background-color: var(--light-bg);
     position: relative;
-    overflow-y: auto; /* Enable vertical scrolling on the right side */
-    overflow-x: hidden; /* Hide horizontal scrollbar */
+    overflow: hidden; /* Prevent container from scrolling */
 }
 
 /* --- Sidebar Styling --- */
@@ -238,9 +236,8 @@ body {
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--border-color);
-    overflow: hidden; /* Prevent sidebar from scrolling */
+    overflow-y: auto; /* Allow sidebar content to scroll if needed */
     max-height: 100vh;
-    min-height: 100vh; /* Ensure minimum height */
 }
 
 .sidebar.open {
@@ -252,11 +249,9 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
-    overflow-y: auto;
+    overflow-y: auto; /* Allow sidebar content to scroll */
     min-height: 0;
-    flex-grow: 1; /* Explicitly make content grow to fill available space */
-    /* Ensure content takes all available space */
-    height: 100%;
+    flex-grow: 1;
 }
 
 .sidebar-header {
@@ -264,7 +259,7 @@ body {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0; /* Prevent header from shrinking */
+    flex-shrink: 0;
 }
 
 .sidebar-header h2 {
@@ -275,7 +270,7 @@ body {
 
 .sidebar-menu {
     flex: 1;
-    flex-grow: 1; /* Explicitly make menu grow to fill available space */
+    flex-grow: 1;
     overflow-y: auto;
     min-height: 0;
 }
@@ -322,8 +317,8 @@ body {
 }
 
 .sidebar-footer {
-    flex-shrink: 0; /* Prevent footer from shrinking */
-    flex-grow: 0; /* Prevent footer from growing */
+    flex-shrink: 0;
+    flex-grow: 0;
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border-color);
     text-align: center;
@@ -331,7 +326,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    margin-top: auto; /* Push footer to bottom */
+    margin-top: auto;
 }
 
 .sidebar-footer .logout-btn {
@@ -425,25 +420,28 @@ body {
 
 /* --- Content Sections Styling --- */
 .main-content {
-    flex: 1; /* Take remaining space */
+    flex: 1;
     display: flex;
     flex-direction: column;
     background-color: var(--light-bg);
-    overflow-y: auto; /* Enable vertical scrolling on the right side */
-    overflow-x: hidden; /* Hide horizontal scrollbar */
+    height: 100vh; /* Full viewport height */
+    overflow: hidden; /* Prevent main content from scrolling */
     position: relative;
 }
 
-/* Unified Container System for All Pages */
 .content-section {
-    max-width: 1400px;
-    margin: 0 auto;
+    display: none;
     width: 100%;
-    padding: 0 1rem;
-    box-sizing: border-box;
-    flex: 1;
-    overflow-y: auto; /* Enable scrolling */
+    height: 100%;
+    overflow-y: auto; /* Only the content section scrolls */
+    overflow-x: hidden;
     padding: 1rem;
+    box-sizing: border-box;
+}
+
+.content-section.active {
+    display: flex;
+    flex-direction: column;
 }
 
 /* Unified Page Containers */
@@ -453,15 +451,13 @@ body {
 .help-container,
 .cards-section {
     font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
-    padding: 1rem; /* Add padding to prevent hover clipping */
+    padding: 1rem;
     background-color: #f8f9fe;
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
-    flex: 1; /* Take available space */
-    overflow-y: auto; /* Allow content scrolling */
-    min-height: 0; /* Allow container to shrink */
+    min-height: 0;
 }
 
 /* Unified Page Headers */
@@ -472,9 +468,9 @@ body {
     margin: 0 auto 1rem auto;
     width: 100%;
     padding: 1.5rem;
-    background: #ADD8E6; /* Same color for all page headers */
+    background: #ADD8E6;
     border-radius: 16px;
-    box-shadow: none; /* Disable shadows */
+    box-shadow: none;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -544,7 +540,7 @@ body {
 
 .card.summary-card:hover {
     box-shadow: 0 0px 20px 0 rgba(90, 90, 90, 0.199);
-    transform: translateY(-4px); /* Reduced transform to prevent clipping */
+    transform: translateY(-4px);
 }
 
 /* Unified Summary Card Colors */
@@ -604,19 +600,6 @@ body {
     margin: 0;
 }
 
-.content-section {
-    display: none;
-    width: 100%;
-    flex: 1; /* Take remaining space */
-    overflow-y: auto; /* Allow content scrolling */
-    padding: 1rem;
-}
-
-.content-section.active {
-    display: flex;
-    flex-direction: column;
-}
-
 /* --- Main Header Styling --- */
 .main-header {
     position: relative;
@@ -624,7 +607,7 @@ body {
     padding: 1rem 2rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     z-index: 999;
-    flex-shrink: 0; /* Prevent header from shrinking */
+    flex-shrink: 0;
     display: none;
     align-items: center;
     justify-content: space-between;
@@ -1330,10 +1313,8 @@ textarea {
     }
 
     .main-content {
-        padding-top: 1rem;
         width: 100%;
-        min-height: 100vh;
-        overflow: hidden;
+        height: 100vh;
     }
 
     .main-header {
@@ -1395,8 +1376,12 @@ textarea {
     }
 
     .main-content {
-        padding-top: calc(70px + 1.5rem);
         width: 100%;
+        padding-top: 70px;
+    }
+
+    .content-section {
+        padding-top: 1.5rem;
     }
 
     .main-header {
@@ -1448,8 +1433,12 @@ textarea {
     }
 
     .main-content {
-        padding: 1rem;
-        padding-top: calc(70px + 1rem);
         width: 100%;
+        padding-top: 70px;
+    }
+
+    .content-section {
+        padding: 1rem;
+        padding-top: 1rem;
     }
 }

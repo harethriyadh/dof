@@ -10,17 +10,19 @@
   justify-content: flex-start;
   align-items: center;
   min-height: 100vh;
-  padding: 0;
+  padding: 1.5rem;
   font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
-  background-color: #f1f3f4; /* A nice, soft white background */
+  background-color: #ffffff;
   direction: rtl;
   text-align: right;
   color: #202124; /* Dark text for high contrast */
-  overflow: hidden;
+  overflow-x: auto;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 /* --- Page Header --- */

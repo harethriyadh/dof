@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import "../AllRequests.css"; // Import the CSS file
 
 export default function MyQuests() {
@@ -15,55 +17,51 @@ export default function MyQuests() {
   ];
   const filteredRequests = statusFilter === 'all' ? requests : requests.filter(r => r.status === statusFilter);
 
-  // PDF export handler with better error handling
+  // Handle export requests to PDF (EXACT SAME AS RequestsManagement.jsx)
   const handleExportPDF = async () => {
     setIsExporting(true);
     setExportMessage("");
 
     try {
-      // Dynamically import jsPDF and html2canvas for client-side PDF export
-      const jsPDFModule = await import('jspdf');
-      const html2canvas = await import('html2canvas');
-      
-      const doc = new jsPDFModule.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      // Get the table element to export
       const table = document.getElementById('requests-table');
-      
       if (!table) {
-        throw new Error('Table not found for export');
+        throw new Error('Table element not found.');
       }
 
-      // Temporarily hide the "خيارات" column before generating PDF
-      const optionsHeader = table.querySelector('th:last-child');
-      const optionsCells = table.querySelectorAll('td:last-child');
-      
-      if (optionsHeader) optionsHeader.style.display = 'none';
-      optionsCells.forEach(cell => cell.style.display = 'none');
-
-      const canvas = await html2canvas.default(table, { 
-        scale: 2,
-        useCORS: true,
-        foreignObjectRendering: true
+      // Use html2canvas to render the table as a canvas
+      const canvas = await html2canvas(table, {
+        scale: 2, // Increase scale for better resolution
+        logging: false, // Disable console logs
+        useCORS: true // Required for some assets if they are from different origins
       });
 
-      // Restore the hidden columns
-      if (optionsHeader) optionsHeader.style.display = '';
-      optionsCells.forEach(cell => cell.style.display = '');
-
       const imgData = canvas.toDataURL('image/png');
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: 'a4'
+      });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Calculate the image dimensions to fit the page
       const imgProps = doc.getImageProperties(imgData);
-      const imgWidth = pageWidth - 40;
+      const imgWidth = pageWidth - 40; // 20px margin on each side
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-      
-      doc.addImage(imgData, 'PNG', 20, 40, imgWidth, imgHeight);
+
+      // Add the table image to the PDF
+      doc.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight);
+
+      // Save the PDF
       doc.save('requests.pdf');
-      
-      setExportMessage("تم تصدير الملف بنجاح!");
+
+      setExportMessage("تم تصدير الطلبات بنجاح!");
       setTimeout(() => setExportMessage(""), 3000);
       
     } catch (error) {
       console.error('PDF Export Error:', error);
-      setExportMessage("فشل في توليد ملف PDF. الرجاء المحاولة مرة أخرى.");
+      setExportMessage("فشل في تصدير الطلبات. الرجاء المحاولة مرة أخرى.");
       setTimeout(() => setExportMessage(""), 5000);
     } finally {
       setIsExporting(false);
@@ -149,7 +147,7 @@ export default function MyQuests() {
               <th>تاريخ الطلب</th>
               <th>وصف الطلب</th>
               <th>الحالة</th>
-              <th>خيارات</th>
+              <th>الإجراءات</th>
             </tr>
           </thead>
           <tbody>

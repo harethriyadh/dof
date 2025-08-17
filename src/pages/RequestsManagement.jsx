@@ -1,17 +1,25 @@
 import React, { useState, useMemo } from "react";
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import "../RequestsManagement.css";
 
+// This component handles the management and approval/rejection of employee leave requests.
 export default function RequestsManagement() {
   // State for rejection modal
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState(null);
+  
+  // State for processed requests filter and export
+  const [processedStatusFilter, setProcessedStatusFilter] = useState('all');
+  const [isExportingProcessed, setIsExportingProcessed] = useState(false);
+  const [exportMessageProcessed, setExportMessageProcessed] = useState('');
 
   // Mock data for pending requests
   const [pendingRequests, setPendingRequests] = useState([
-    { 
-      id: '#001', 
-      date: '2024-05-20', 
+    {  
+      id: '#001',  
+      date: '2024-05-20',  
       employeeName: 'أحمد محمد',
       department: 'الموارد البشرية',
       leaveType: 'إجازة سنوية',
@@ -21,9 +29,9 @@ export default function RequestsManagement() {
       reason: 'رحلة عائلية',
       status: 'pending'
     },
-    { 
-      id: '#002', 
-      date: '2024-05-19', 
+    {  
+      id: '#002',  
+      date: '2024-05-19',  
       employeeName: 'فاطمة علي',
       department: 'تقنية المعلومات',
       leaveType: 'إجازة مرضية',
@@ -33,9 +41,9 @@ export default function RequestsManagement() {
       reason: 'مرض عائلي',
       status: 'pending'
     },
-    { 
-      id: '#003', 
-      date: '2024-05-18', 
+    {  
+      id: '#003',  
+      date: '2024-05-18',  
       employeeName: 'محمد حسن',
       department: 'المالية',
       leaveType: 'إجازة طارئة',
@@ -49,9 +57,9 @@ export default function RequestsManagement() {
 
   // Mock data for processed requests
   const [processedRequests, setProcessedRequests] = useState([
-    { 
-      id: '#004', 
-      date: '2024-05-15', 
+    {  
+      id: '#004',  
+      date: '2024-05-15',  
       employeeName: 'سارة أحمد',
       department: 'التسويق',
       leaveType: 'إجازة سنوية',
@@ -63,9 +71,9 @@ export default function RequestsManagement() {
       processedDate: '2024-05-16',
       processedBy: 'مدير الموارد البشرية'
     },
-    { 
-      id: '#005', 
-      date: '2024-05-14', 
+    {  
+      id: '#005',  
+      date: '2024-05-14',  
       employeeName: 'علي محمود',
       department: 'العمليات',
       leaveType: 'إجازة مرضية',
@@ -123,6 +131,65 @@ export default function RequestsManagement() {
     setShowRejectionModal(false);
     setRejectionReason('');
     setSelectedRequestId(null);
+  };
+
+  // Filter processed requests based on status
+  const filteredProcessedRequests = useMemo(() => {
+    if (processedStatusFilter === 'all') {
+      return processedRequests;
+    }
+    return processedRequests.filter(request => request.status === processedStatusFilter);
+  }, [processedRequests, processedStatusFilter]);
+
+  // Handle export processed requests to PDF (FIXED)
+  const handleExportProcessedPDF = async () => {
+    setIsExportingProcessed(true);
+    setExportMessageProcessed("");
+
+    try {
+      // Get the table element to export
+      const table = document.getElementById('processed-requests-table');
+      if (!table) {
+        throw new Error('Table element not found.');
+      }
+
+      // Use html2canvas to render the table as a canvas
+      const canvas = await html2canvas(table, {
+        scale: 2, // Increase scale for better resolution
+        logging: false, // Disable console logs
+        useCORS: true // Required for some assets if they are from different origins
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: 'a4'
+      });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Calculate the image dimensions to fit the page
+      const imgProps = doc.getImageProperties(imgData);
+      const imgWidth = pageWidth - 40; // 20px margin on each side
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      // Add the table image to the PDF
+      doc.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight);
+
+      // Save the PDF
+      doc.save('processed-requests.pdf');
+
+      setExportMessageProcessed("تم تصدير الطلبات المعالجة بنجاح!");
+      setTimeout(() => setExportMessageProcessed(""), 3000);
+      
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      setExportMessageProcessed("فشل في تصدير الطلبات المعالجة. الرجاء المحاولة مرة أخرى.");
+      setTimeout(() => setExportMessageProcessed(""), 5000);
+    } finally {
+      setIsExportingProcessed(false);
+    }
   };
 
   // Get status color class
@@ -200,6 +267,7 @@ export default function RequestsManagement() {
             <thead>
               <tr>
                 <th>رقم الطلب</th>
+                <th>الإجراءات</th>
                 <th>تاريخ الطلب</th>
                 <th>اسم الموظف</th>
                 <th>القسم</th>
@@ -208,31 +276,22 @@ export default function RequestsManagement() {
                 <th>إلى تاريخ</th>
                 <th>عدد الأيام</th>
                 <th>السبب</th>
-                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
               {pendingRequests.map((request) => (
                 <tr key={request.id} className="pending-row">
                   <td>{request.id}</td>
-                  <td>{request.date}</td>
-                  <td>{request.employeeName}</td>
-                  <td>{request.department}</td>
-                  <td>{request.leaveType}</td>
-                  <td>{request.startDate}</td>
-                  <td>{request.endDate}</td>
-                  <td>{request.days}</td>
-                  <td>{request.reason}</td>
                   <td className="actions-cell">
                     <div className="action-buttons">
-                      <button 
+                      <button  
                         className="btn btn-approve"
                         onClick={() => handleProcessRequest(request.id, 'approved')}
                         title="اعتماد الطلب"
                       >
                         <i className="fas fa-check"></i>
                       </button>
-                      <button 
+                      <button  
                         className="btn btn-reject"
                         onClick={() => handleRejectClick(request.id)}
                         title="رفض الطلب"
@@ -241,12 +300,51 @@ export default function RequestsManagement() {
                       </button>
                     </div>
                   </td>
+                  <td>{request.date}</td>
+                  <td>{request.employeeName}</td>
+                  <td>{request.department}</td>
+                  <td>{request.leaveType}</td>
+                  <td>{request.startDate}</td>
+                  <td>{request.endDate}</td>
+                  <td>{request.days}</td>
+                  <td>{request.reason}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Filters and Export for Processed Requests */}
+      <div className="filters">
+        <div className="filter-group">
+          <label htmlFor="processed-status-filter">حالة الطلب:</label>
+          <select  
+            id="processed-status-filter"  
+            className="filter-select"  
+            value={processedStatusFilter}  
+            onChange={e => setProcessedStatusFilter(e.target.value)}
+          >
+            <option value="all">الكل</option>
+            <option value="approved">معتمد</option>
+            <option value="rejected">مرفوض</option>
+          </select>
+        </div>
+        <button  
+          className="btn btn-secondary export-pdf-btn"  
+          onClick={handleExportProcessedPDF}
+          disabled={isExportingProcessed}
+        >
+          <i className={`fas ${isExportingProcessed ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>  
+          {isExportingProcessed ? "جاري التصدير..." : "تصدير كـ PDF"}
+        </button>
+      </div>
+
+      {exportMessageProcessed && (
+        <div className={`export-message ${exportMessageProcessed.includes("فشل") ? "error" : "success"}`}>
+          {exportMessageProcessed}
+        </div>
+      )}
 
       {/* Processed Requests Section */}
       <div className="requests-section">
@@ -275,7 +373,7 @@ export default function RequestsManagement() {
               </tr>
             </thead>
             <tbody>
-              {processedRequests.map((request) => (
+              {filteredProcessedRequests.map((request) => (
                 <tr key={request.id} className={`processed-row ${getStatusColorClass(request.status)}`}>
                   <td>{request.id}</td>
                   <td>{request.date}</td>

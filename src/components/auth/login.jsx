@@ -20,128 +20,159 @@ export default function Login() {
       return;
     }
 
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-      
-      if (username === "testuser" && password === "123456") {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         setSuccess("تم تسجيل الدخول بنجاح!");
-        // Redirect or set auth state here
-        setTimeout(() => {
-          // Simulate redirect
-          console.log("User logged in successfully");
-        }, 1500);
+        console.log("Login successful:", data);
+        // Handle successful login here, e.g., store token and redirect
       } else {
-        setError("بيانات الدخول غير صحيحة");
+        // Handle server-side errors (e.g., incorrect credentials)
+        setError(data.message || "بيانات الدخول غير صحيحة");
       }
-    } catch {
-      setError("حدث خطأ في تسجيل الدخول. يرجى المحاولة مرة أخرى.");
+    } catch (err) {
+      // Handle network errors (e.g., server is down)
+      setError("حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.");
+      console.error("Login failed:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ 
-      maxWidth: 400, 
-      margin: "40px auto", 
-      padding: 24, 
-      border: "1px solid #eee", 
-      borderRadius: 8,
-      backgroundColor: "#fff",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-    }}>
-      <h2 style={{ textAlign: "center", marginBottom: "24px", color: "#333" }}>تسجيل الدخول</h2>
-      
+    <div
+      style={{
+        maxWidth: 400,
+        margin: "40px auto",
+        padding: 24,
+        border: "1px solid #eee",
+        borderRadius: 8,
+        backgroundColor: "#fff",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+      }}
+    >
+      <h2
+        style={{ textAlign: "center", marginBottom: "24px", color: "#333" }}
+      >
+        تسجيل الدخول
+      </h2>
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="username" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+          <label
+            htmlFor="username"
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "600",
+            }}
+          >
             اسم المستخدم
           </label>
           <input
             id="username"
             type="text"
             value={username}
-            onChange={e => setUsername(e.target.value)}
-            style={{ 
-              width: "100%", 
-              padding: "12px", 
-              border: "1px solid #ddd", 
+            onChange={(e) => setUsername(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #ddd",
               borderRadius: "4px",
               fontSize: "16px",
-              transition: "border-color 0.3s ease"
+              transition: "border-color 0.3s ease",
             }}
             placeholder="اسم المستخدم"
             disabled={isLoading}
             required
           />
         </div>
-        
+
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="password" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+          <label
+            htmlFor="password"
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "600",
+            }}
+          >
             كلمة المرور
           </label>
           <input
             id="password"
             type="password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={{ 
-              width: "100%", 
-              padding: "12px", 
-              border: "1px solid #ddd", 
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #ddd",
               borderRadius: "4px",
               fontSize: "16px",
-              transition: "border-color 0.3s ease"
+              transition: "border-color 0.3s ease",
             }}
             placeholder="******"
             disabled={isLoading}
             required
           />
         </div>
-        
+
         {error && (
-          <div style={{ 
-            color: "#dc3545", 
-            marginBottom: 12, 
-            padding: "8px 12px",
-            backgroundColor: "#f8d7da",
-            border: "1px solid #f5c6cb",
-            borderRadius: "4px",
-            fontSize: "14px"
-          }}>
+          <div
+            style={{
+              color: "#dc3545",
+              marginBottom: 12,
+              padding: "8px 12px",
+              backgroundColor: "#f8d7da",
+              border: "1px solid #f5c6cb",
+              borderRadius: "4px",
+              fontSize: "14px",
+            }}
+          >
             {error}
           </div>
         )}
-        
+
         {success && (
-          <div style={{ 
-            color: "#155724", 
-            marginBottom: 12, 
-            padding: "8px 12px",
-            backgroundColor: "#d4edda",
-            border: "1px solid #c3e6cb",
-            borderRadius: "4px",
-            fontSize: "14px"
-          }}>
+          <div
+            style={{
+              color: "#155724",
+              marginBottom: 12,
+              padding: "8px 12px",
+              backgroundColor: "#d4edda",
+              border: "1px solid #c3e6cb",
+              borderRadius: "4px",
+              fontSize: "14px",
+            }}
+          >
             {success}
           </div>
         )}
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           disabled={isLoading}
-          style={{ 
-            width: "100%", 
-            padding: "12px", 
-            background: isLoading ? "#6c757d" : "#1976d2", 
-            color: "#fff", 
-            border: "none", 
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: isLoading ? "#6c757d" : "#1976d2",
+            color: "#fff",
+            border: "none",
             borderRadius: "4px",
             fontSize: "16px",
             fontWeight: "600",
             cursor: isLoading ? "not-allowed" : "pointer",
-            transition: "background-color 0.3s ease"
+            transition: "background-color 0.3s ease",
           }}
         >
           {isLoading ? "جاري تسجيل الدخول..." : "دخول"}

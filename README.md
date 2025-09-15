@@ -1,12 +1,65 @@
-# React + Vite
+# نظام إدارة الطلبات (Request Management System)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## نظرة عامة
+نظام إدارة الطلبات هو تطبيق ويب مبني باستخدام React و Vite لإدارة طلبات الإجازات والغياب للموظفين.
 
-Currently, two official plugins are available:
+## الميزات الرئيسية
+- **نظام المصادقة**: تسجيل الدخول وإنشاء حسابات جديدة
+- **لوحة التحكم**: واجهة مستخدم عربية سهلة الاستخدام
+- **إدارة الطلبات**: تقديم وإدارة طلبات الإجازات
+- **نظام الأدوار**: دعم مستويات مختلفة من الصلاحيات
+- **واجهة متجاوبة**: تعمل على جميع الأجهزة
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## الملفات الجديدة
+- `src/components/auth/AuthPage.jsx` - صفحة المصادقة الرئيسية (تسجيل الدخول والتسجيل)
+- `src/App.jsx` - تم تحديثه لدعم التوجيه
+- `index.html` - تم تحديثه لدعم Tailwind CSS واللغة العربية
 
-## Expanding the ESLint configuration
+## كيفية الاستخدام
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### تسجيل الدخول
+1. انتقل إلى `/auth`
+2. أدخل اسم المستخدم: `testuser`
+3. أدخل كلمة المرور: `123456`
+4. اضغط على "دخول"
+
+### إنشاء حساب جديد
+1. في صفحة المصادقة، اضغط على "تسجيل جديد"
+2. املأ جميع الحقول المطلوبة:
+   - الاسم الكامل
+   - اسم المستخدم
+   - كلمة المرور
+   - الدور (مدير عام، مدير، مسؤول، موظف)
+   - معرف القسم
+   - معرف الكلية
+3. اضغط على "تسجيل"
+
+### التنقل
+- بعد تسجيل الدخول، سيتم توجيهك إلى `/dashboard`
+- استخدم زر "تسجيل الخروج" للعودة إلى صفحة المصادقة
+
+## التقنيات المستخدمة
+- **Frontend**: React 19, Vite
+- **Styling**: Tailwind CSS
+- **Routing**: React Router DOM
+- **Language**: Arabic (RTL support)
+
+## التطوير
+```bash
+# تثبيت التبعيات
+npm install
+
+# تشغيل خادم التطوير
+npm run dev
+
+# بناء المشروع للإنتاج
+npm run build
+
+# معاينة البناء
+npm run preview
+```
+
+## ملاحظات
+- النظام يستخدم بيانات تجريبية حالياً
+- يمكن ربط النظام بقاعدة بيانات حقيقية لاحقاً
+- جميع النصوص باللغة العربية مع دعم RTL

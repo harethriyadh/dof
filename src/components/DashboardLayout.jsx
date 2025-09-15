@@ -255,7 +255,13 @@ export default function DashboardLayout() {
         
         {/* Sidebar Footer - Always at bottom */}
         <div className="sidebar-footer">
-          <a href="#" className="logout-btn"><i className="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+          <a 
+            href="#" 
+            className="logout-btn" 
+            onClick={(e) => { e.preventDefault(); window.location.href = '/auth'; }}
+          >
+            <i className="fas fa-sign-out-alt"></i> تسجيل الخروج
+          </a>
           <div className="developer-footer">
             <span>Developed by: <a href="#" className="developer-link">Harith Riyadh</a></span>
           </div>
@@ -265,6 +271,25 @@ export default function DashboardLayout() {
       <main className="main-content" style={{ zIndex: 1 }}>
         <header className="main-header">
           <button className="menu-toggle-btn" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><i className="fas fa-bars"></i></button>
+          <button 
+            className="logout-btn" 
+            aria-label="تسجيل الخروج" 
+            onClick={() => window.location.href = '/auth'}
+            style={{
+              marginLeft: 'auto',
+              padding: '8px 16px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            <i className="fas fa-sign-out-alt" style={{ marginLeft: '8px' }}></i>
+            تسجيل الخروج
+          </button>
         </header>
         <section className="content-section active">
           {renderSection()}

@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from "./components/DashboardLayout.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
+import AuthPage from "./components/auth/AuthPage.jsx";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -61,19 +63,25 @@ class ErrorBoundary extends React.Component {
 function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          fontFamily: 'Tajawal, Cairo, Arial, sans-serif'
-        }}>
-          <LoadingSpinner size="large" />
-        </div>
-      }>
-        <DashboardLayout />
-      </Suspense>
+      <Router>
+        <Suspense fallback={
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            fontFamily: 'Tajawal, Cairo, Arial, sans-serif'
+          }}>
+            <LoadingSpinner size="large" />
+          </div>
+        }>
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/dashboard/*" element={<DashboardLayout />} />
+            <Route path="/" element={<Navigate to="/auth" replace />} />
+          </Routes>
+        </Suspense>
+      </Router>
     </ErrorBoundary>
   );
 }

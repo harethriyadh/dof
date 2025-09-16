@@ -1,0 +1,277 @@
+FRONTEND LOGIN INTEGRATION SPECIFICATIONS
+==========================================
+
+OVERVIEW
+--------
+This document contains all the technical details needed to make the backend compatible with the frontend login system.
+
+FRONTEND CONFIGURATION
+----------------------
+- Frontend URL: http://localhost:5173 (Vite dev server default)
+- API Base URL: https://dof-b.onrender.com/api/v1
+- Environment Variable: VITE_API_BASE (optional override)
+
+LOGIN ENDPOINT SPECIFICATIONS
+-----------------------------
+Method: POST
+URL: https://dof-b.onrender.com/api/v1/login
+Content-Type: application/json
+
+Request Body:
+{
+    "username": "johndoe",
+    "password": "password123"
+}
+
+Expected Response Format:
+{
+    "success": true,
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "user": {
+            "id": "68b57004b8d8961a6b93d3dc",
+            "fullName": "John Doe",
+            "username": "johndoe",
+            "role": "Employee|Head of Department|Manager|Super Admin",
+            "departmentId": 1,
+            "collegeId": 1
+        }
+    }
+}
+
+Error Response Format:
+{
+    "success": false,
+    "message": "Invalid credentials" // or appropriate error message
+}
+
+CORS REQUIREMENTS
+----------------
+The backend MUST allow the frontend origin to prevent "Failed to fetch" errors.
+
+Required CORS Configuration:
+- Origin: http://localhost:5173
+- Methods: POST, GET, PUT, DELETE, OPTIONS
+- Headers: Content-Type, Authorization
+- Credentials: true (if using cookies)
+
+Example Express.js CORS setup:
+```javascript
+const cors = require('cors');
+
+app.use(cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+}));
+```
+
+AUTHENTICATION TOKEN
+--------------------
+- Token Type: JWT (JSON Web Token)
+- Storage: localStorage (key: 'authToken')
+- Expiry: 24 hours (as per backend implementation)
+- Header Format: Authorization: Bearer <token>
+
+Example of how frontend sends token:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+PROTECTED ROUTES
+----------------
+All API endpoints (except login) should:
+1. Check for Authorization header
+2. Validate JWT token
+3. Return 401 Unauthorized if token is missing/invalid
+4. Return user data if token is valid
+
+Frontend Protected Route Logic:
+- Checks localStorage for 'authToken'
+- Redirects to /login if no token found
+- Allows access to dashboard if token exists
+
+USER DATA STORAGE
+-----------------
+Frontend stores user data in localStorage:
+- Key: 'authUser'
+- Value: JSON string of user object
+- Used for displaying user info in dashboard
+
+LOGOUT PROCESS
+--------------
+Frontend logout:
+1. Clears localStorage ('authToken' and 'authUser')
+2. Redirects to /login page
+3. No backend call required (stateless JWT)
+
+TEST CREDENTIALS
+----------------
+For testing purposes, use these credentials:
+- Username: johndoe
+- Password: password123
+
+Expected user data:
+- ID: 68b57004b8d8961a6b93d3dc
+- Full Name: John Doe
+- Username: johndoe
+- Role: Employee
+- Department ID: 1
+- College ID: 1
+
+FRONTEND FILES INVOLVED
+-----------------------
+1. src/api/client.js - API client with base URL and auth handling
+2. src/components/auth/login.jsx - Login form component
+3. src/App.jsx - Protected route logic
+4. src/components/DashboardLayout.jsx - Logout functionality
+
+API CLIENT DETAILS
+------------------
+The frontend uses a custom fetch-based API client that:
+- Automatically adds Authorization header when token exists
+- Handles JSON parsing
+- Provides error handling
+- Base URL: https://dof-b.onrender.com/api/v1
+
+Key functions:
+- apiRequest(path, options) - Main API call function
+- saveAuth(token, user) - Store auth data
+- clearAuth() - Clear auth data
+- isAuthenticated() - Check if user is logged in
+
+ERROR HANDLING
+--------------
+Frontend expects these HTTP status codes:
+- 200: Success
+- 401: Unauthorized (invalid credentials or expired token)
+- 400: Bad Request (validation errors)
+- 500: Server Error
+
+Frontend displays Arabic error messages:
+- "بيانات الدخول غير صحيحة" (Invalid login credentials)
+- "حدث خطأ في تسجيل الدخول. يرجى المحاولة مرة أخرى." (Login error, please try again)
+
+TESTING CHECKLIST
+-----------------
+Backend developer should verify:
+□ POST /api/v1/login accepts JSON with username/password
+□ Returns correct response format with token and user data
+□ CORS allows http://localhost:5173 origin
+□ JWT token is valid for 24 hours
+□ Protected routes require Authorization header
+□ Token validation works correctly
+□ Error responses are in correct format
+
+DEPLOYMENT CONSIDERATIONS
+-------------------------
+For production:
+- Update CORS origin to production frontend URL
+- Update VITE_API_BASE to production backend URL
+- Ensure HTTPS is used
+- Consider token refresh mechanism for better UX
+
+CONTACT
+-------
+If you need clarification on any of these specifications, please refer to the frontend code in the mentioned files or contact the frontend developer.
+
+Last updated: [Current Date]
+
+LOGIN & REGISTRATION QUICK REFERENCE
+===================================
+
+BASE URL (Production)
+---------------------
+- https://dof-b.onrender.com/api/v1
+  - Health: https://dof-b.onrender.com/health
+  - Login:  https://dof-b.onrender.com/api/v1/login
+  - Register: https://dof-b.onrender.com/api/v1/register
+
+Optional Local Base (for local dev)
+-----------------------------------
+- http://localhost:3001/api/v1
+
+Common Requirements
+-------------------
+- Headers: Content-Type: application/json
+- CORS: Allow frontend origin (e.g., http://localhost:5173)
+- Responses are JSON with shape: { success: boolean, data?: object, message?: string }
+
+Login Endpoint
+--------------
+- Method: POST
+- URL (prod): https://dof-b.onrender.com/api/v1/login
+- Request body:
+  {
+    "username": "johndoe",
+    "password": "password123"
+  }
+- Success response:
+  {
+    "success": true,
+    "data": {
+      "token": "<JWT>",
+      "user": {
+        "id": "<mongo_id>",
+        "fullName": "John Doe",
+        "username": "johndoe",
+        "role": "Employee|Head of Department|Manager|Super Admin",
+        "departmentId": 1,
+        "collegeId": 1
+      }
+    }
+  }
+- Error response (examples):
+  { "success": false, "message": "Invalid credentials" }
+  { "success": false, "message": "Validation error", "errors": { "username": "Required" } }
+- Token: JWT, expiry 24h, to be sent as Authorization: Bearer <token> on protected calls
+
+Register Endpoint
+-----------------
+- Method: POST
+- URL (prod): https://dof-b.onrender.com/api/v1/register
+- Request body (example):
+  {
+    "fullName": "New User",
+    "username": "newuser123",
+    "password": "test123",
+    "role": "Employee",
+    "departmentId": null,
+    "collegeId": null
+  }
+- Success response:
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "<mongo_id>",
+        "fullName": "New User",
+        "username": "newuser123",
+        "role": "Employee",
+        "departmentId": null,
+        "collegeId": null
+      }
+    }
+  }
+- Error response (examples):
+  { "success": false, "message": "Username already exists" }
+  { "success": false, "message": "Validation error", "errors": { "password": "Min length 6" } }
+
+Curl Examples
+-------------
+- Login:
+  curl -X POST https://dof-b.onrender.com/api/v1/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"johndoe","password":"password123"}'
+
+- Register:
+  curl -X POST https://dof-b.onrender.com/api/v1/register \
+    -H "Content-Type: application/json" \
+    -d '{"fullName":"New User","username":"newuser123","password":"test123","role":"Employee","departmentId":null,"collegeId":null}'
+
+Frontend Usage Notes
+--------------------
+- Base API is configured to https://dof-b.onrender.com/api/v1 by default.
+- Frontend stores token under localStorage key 'authToken' and user under 'authUser'.
+- Protected requests automatically include Authorization header via the API client.

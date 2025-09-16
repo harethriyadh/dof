@@ -23,7 +23,7 @@ export default function DashboardLayout() {
     fullDay: {
       startDate: "",
       endDate: "",
-      requestType: "annual",
+      requestType: "daily",
       description: ""
     },
     partTime: {
@@ -144,7 +144,7 @@ export default function DashboardLayout() {
       setTimeout(() => {
         setFormData(prev => ({
           ...prev,
-          fullDay: { startDate: "", endDate: "", requestType: "annual", description: "" }
+          fullDay: { startDate: "", endDate: "", requestType: "daily", description: "" }
         }));
         setSubmitMessage("");
         setShowFullDayModal(false);
@@ -301,7 +301,7 @@ export default function DashboardLayout() {
         <div className="form-overlay visible" onClick={e => { if (e.target.classList.contains('form-overlay')) setShowFullDayModal(false); }}>
           <div className="form-container">
             <div className="form-header">
-              <h3>تقديم طلب إجازة يوم كامل</h3>
+              <h3>تقديم طلب إجازة</h3>
               <button className="close-form-btn" onClick={() => setShowFullDayModal(false)}><i className="fas fa-times"></i></button>
             </div>
             
@@ -348,11 +348,11 @@ export default function DashboardLayout() {
                     <input 
                       type="radio" 
                       name="fullDayRequestType" 
-                      value="annual" 
-                      checked={formData.fullDay.requestType === "annual"}
+                      value="daily" 
+                      checked={formData.fullDay.requestType === "daily"}
                       onChange={(e) => handleFullDayChange("requestType", e.target.value)}
                     />
-                    <span className="radio-text">سنوية</span>
+                    <span className="radio-text">يومية</span>
                   </label>
                   <label className="radio-label">
                     <input 
@@ -368,21 +368,31 @@ export default function DashboardLayout() {
                     <input 
                       type="radio" 
                       name="fullDayRequestType" 
-                      value="emergency" 
-                      checked={formData.fullDay.requestType === "emergency"}
+                      value="study" 
+                      checked={formData.fullDay.requestType === "study"}
                       onChange={(e) => handleFullDayChange("requestType", e.target.value)}
                     />
-                    <span className="radio-text">طارئة</span>
+                    <span className="radio-text">دراسية</span>
                   </label>
                   <label className="radio-label">
                     <input 
                       type="radio" 
                       name="fullDayRequestType" 
-                      value="unpaid" 
-                      checked={formData.fullDay.requestType === "unpaid"}
+                      value="hajj" 
+                      checked={formData.fullDay.requestType === "hajj"}
                       onChange={(e) => handleFullDayChange("requestType", e.target.value)}
                     />
-                    <span className="radio-text">بدون راتب</span>
+                    <span className="radio-text">حج او عمرة</span>
+                  </label>
+                  <label className="radio-label">
+                    <input 
+                      type="radio" 
+                      name="fullDayRequestType" 
+                      value="marriage" 
+                      checked={formData.fullDay.requestType === "marriage"}
+                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                    />
+                    <span className="radio-text">زواج</span>
                   </label>
                 </div>
                 {formErrors.requestType && <div className="error-message">{formErrors.requestType}</div>}

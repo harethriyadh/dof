@@ -14,41 +14,47 @@ export default function AuthPage() {
     password: ''
   });
 
-  // Register form state
-  const [registerData, setRegisterData] = useState({
-    full_name: '',
-    username: '',
-    password: '',
-    phone: '',
-    specialist: '',
-    college: '',
-    department: '',
-    role: 'employee',
-    leave_balances: []
-  });
+  // Register form state
+  const [registerData, setRegisterData] = useState({
+    full_name: '',
+    username: '',
+    password: '',
+    phone: '',
+    specialist: '',
+    college: '',
+    department: '',
+    role: 'employee'
+  });
 
   const navigate = useNavigate();
 
-  // Hardcoded leave types for demonstration
-  const leaveTypes = [
-    { id: 'annual', name: 'إجازة سنوية' },
-    { id: 'sick', name: 'إجازة مرضية' }
-  ];
 
-  // Colleges and their departments (dependent dropdown data)
-  const collegesMap = {
-    'كلية الادارة والاقتصاد': [
-      'قسم المحاسبة',
-      'قسم ادارة الاعمال',
-      'قسم المالية والمصرفية'
-    ],
-    'كلية طب الاسنان': [],
-    'كلية التقنيات الصحية والطبية': [
-      'قسم التخدير',
-      'قسم صناعة الاسنان',
-      'قسم الاشعة'
-    ]
-  };
+  // Colleges and their departments (dependent dropdown data)
+  const collegesMap = {
+    'الرئاسة': [
+      'تكنولوجيا المعلومات',
+      'قسم التسجل وشؤون الطلبة',
+      'قسم الادارية',
+      'قسم القانونية',
+      'مكتب رئيس الجامعة',
+      'قسم الاعلام',
+      'قسم المتابعة',
+      'قسم الديوان',
+      'قسم الدراسات والتخطيط',
+      'مكتب المساعد العلمي'
+    ],
+    'كلية الادارة والاقتصاد': [
+      'قسم المحاسبة',
+      'قسم ادارة الاعمال',
+      'قسم المالية والمصرفية'
+    ],
+    'كلية طب الاسنان': [],
+    'كلية التقنيات الصحية والطبية': [
+      'قسم التخدير',
+      'قسم صناعة الاسنان',
+      'قسم الاشعة'
+    ]
+  };
   const collegeOptions = Object.keys(collegesMap);
   const departmentOptions = registerData.college && collegesMap[registerData.college]
     ? collegesMap[registerData.college]
@@ -69,9 +75,9 @@ export default function AuthPage() {
     if (!payload.password || payload.password.length < 6) {
       errors.push({ field: 'password', message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
     }
-    if (payload.phone && !phoneRegex.test(payload.phone)) {
-      errors.push({ field: 'phone', message: 'رقم الهاتف غير صالح' });
-    }
+    if (!payload.phone || !phoneRegex.test(payload.phone)) {
+      errors.push({ field: 'phone', message: 'رقم الهاتف مطلوب ويجب أن يكون صالحاً' });
+    }
     const checkLen = (value, field) => {
       if (value && (value.trim().length < 1 || value.trim().length > 100)) {
         errors.push({ field, message: 'يجب أن يتراوح الطول بين 1 و 100 حرف' });
@@ -151,23 +157,12 @@ export default function AuthPage() {
     const basePayload = { ...registerData };
     basePayload.role = (basePayload.role || 'employee').toLowerCase();
 
-    // Filter empty optional fields and normalize leave_balances
-    const cleaned = Object.fromEntries(
-      Object.entries(basePayload).filter(([key, value]) => {
-        if (Array.isArray(value)) return true;
-        return value !== '' && value !== null && value !== undefined;
-      })
-    );
-    if (Array.isArray(cleaned.leave_balances)) {
-      cleaned.leave_balances = cleaned.leave_balances
-        .filter(Boolean)
-        .map(item => ({
-          leave_type_id: item.leave_type_id,
-          available_days: Number(item.available_days ?? 0),
-          one_time_used: Boolean(item.one_time_used)
-        }));
-      if (cleaned.leave_balances.length === 0) delete cleaned.leave_balances;
-    }
+    // Filter empty optional fields
+    const cleaned = Object.fromEntries(
+      Object.entries(basePayload).filter(([key, value]) => {
+        return value !== '' && value !== null && value !== undefined;
+      })
+    );
 
     // Validate per guide
     const { valid, errors } = validateRegister(cleaned);
@@ -219,30 +214,6 @@ export default function AuthPage() {
     }
   };
 
-  const handleLeaveBalanceChange = (leaveTypeId, availableDays) => {
-    setRegisterData(prev => {
-      const existingLeave = prev.leave_balances.find(lb => lb.leave_type_id === leaveTypeId);
-      if (availableDays <= 0) {
-        return {
-          ...prev,
-          leave_balances: prev.leave_balances.filter(lb => lb.leave_type_id !== leaveTypeId)
-        };
-      }
-      if (existingLeave) {
-        return {
-          ...prev,
-          leave_balances: prev.leave_balances.map(lb =>
-            lb.leave_type_id === leaveTypeId ? { ...lb, available_days: parseInt(availableDays, 10) } : lb
-          )
-        };
-      } else {
-        return {
-          ...prev,
-          leave_balances: [...prev.leave_balances, { leave_type_id: leaveTypeId, available_days: parseInt(availableDays, 10) }]
-        };
-      }
-    });
-  };
 
   return (
     <div className="flex items-center justify-center p-6 bg-teal-50 rounded-3xl min-h-screen">
@@ -371,21 +342,22 @@ export default function AuthPage() {
                 required
               />
             </div>
-            {/* Optional fields in a grid */}
+            {/* Additional required and optional fields in a grid */}
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="reg-phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  رقم الهاتف (اختياري)
-                </label>
-                <input
-                  type="text"
-                  id="reg-phone"
-                  value={registerData.phone}
-                  onChange={(e) => handleInputChange('register', 'phone', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  disabled={isLoading}
-                />
-              </div>
+              <div>
+                <label htmlFor="reg-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  رقم الهاتف *
+                </label>
+                <input
+                  type="text"
+                  id="reg-phone"
+                  value={registerData.phone}
+                  onChange={(e) => handleInputChange('register', 'phone', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
               <div>
                 <label htmlFor="reg-specialist" className="block text-sm font-medium text-gray-700 mb-1">
                   الاختصاص (اختياري)
@@ -402,9 +374,9 @@ export default function AuthPage() {
             </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-college" className="block text-sm font-medium text-gray-700 mb-1">
-                  الكلية (اختياري)
-                </label>
+                <label htmlFor="reg-college" className="block text-sm font-medium text-gray-700 mb-1">
+                  التوزيع
+                </label>
                 <select
                   id="reg-college"
                   value={registerData.college}
@@ -412,16 +384,16 @@ export default function AuthPage() {
                   className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   disabled={isLoading}
                 >
-                  <option value="">اختر الكلية</option>
+                  <option value="">اختر التوزيع</option>
                   {collegeOptions.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label htmlFor="reg-department" className="block text-sm font-medium text-gray-700 mb-1">
-                  القسم (اختياري)
-                </label>
+                <label htmlFor="reg-department" className="block text-sm font-medium text-gray-700 mb-1">
+                  القسم
+                </label>
                 <select
                   id="reg-department"
                   value={registerData.department}
@@ -451,27 +423,6 @@ export default function AuthPage() {
                 <option value="manager">مسؤول</option>
                 <option value="admin">مدير</option>
               </select>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                أرصدة الإجازات (اختياري)
-              </label>
-              {leaveTypes.map((type) => (
-                <div key={type.id} className="mt-2 flex items-center gap-2">
-                  <label htmlFor={`leave-${type.id}`} className="text-sm text-gray-600 w-1/2">
-                    {type.name}
-                  </label>
-                  <input
-                    type="number"
-                    id={`leave-${type.id}`}
-                    value={registerData.leave_balances.find(lb => lb.leave_type_id === type.id)?.available_days || ''}
-                    onChange={(e) => handleLeaveBalanceChange(type.id, e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    min="0"
-                    disabled={isLoading}
-                  />
-                </div>
-              ))}
             </div>
             <div className="mt-6">
               <button

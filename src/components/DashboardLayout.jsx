@@ -312,35 +312,6 @@ export default function DashboardLayout() {
             )}
             
             <form onSubmit={handleFullDaySubmit}>
-              <div className={`form-group ${formErrors.startDate ? "error" : ""}`}>
-                <label htmlFor="full-day-start-date">تاريخ بداية الإجازة:</label>
-                <input 
-                  type="date" 
-                  id="full-day-start-date" 
-                  name="startDate" 
-                  value={formData.fullDay.startDate}
-                  onChange={(e) => handleFullDayChange("startDate", e.target.value)}
-                  onClick={handleDateInputClick}
-                  required 
-                />
-                {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
-              </div>
-              
-              <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
-                <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
-                <input 
-                  type="date" 
-                  id="full-day-end-date" 
-                  name="endDate" 
-                  value={formData.fullDay.endDate}
-                  onChange={(e) => handleFullDayChange("endDate", e.target.value)}
-                  onClick={handleDateInputClick}
-                  required 
-                />
-                {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
-                {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
-              </div>
-              
               <div className={`form-group ${formErrors.requestType ? "error" : ""}`}>
                 <label>نوع الإجازة:</label>
                 <div className="radio-group">
@@ -397,6 +368,36 @@ export default function DashboardLayout() {
                 </div>
                 {formErrors.requestType && <div className="error-message">{formErrors.requestType}</div>}
               </div>
+              
+              <div className={`form-group ${formErrors.startDate ? "error" : ""}`}>
+                <label htmlFor="full-day-start-date">تاريخ بداية الإجازة:</label>
+                <input 
+                  type="date" 
+                  id="full-day-start-date" 
+                  name="startDate" 
+                  value={formData.fullDay.startDate}
+                  onChange={(e) => handleFullDayChange("startDate", e.target.value)}
+                  onClick={handleDateInputClick}
+                  required 
+                />
+                {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
+              </div>
+              
+              <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
+                <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
+                <input 
+                  type="date" 
+                  id="full-day-end-date" 
+                  name="endDate" 
+                  value={formData.fullDay.endDate}
+                  onChange={(e) => handleFullDayChange("endDate", e.target.value)}
+                  onClick={handleDateInputClick}
+                  required 
+                />
+                {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
+                {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
+              </div>
+              
               
               <div className="form-group">
                 <label htmlFor="full-day-request-description">ملاحظات إضافية (اختياري):</label>

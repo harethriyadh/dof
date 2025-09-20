@@ -36,7 +36,12 @@ export default function DashboardLayout() {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  // NEW STATE: To hold the calculated vacation summary message
+  const [vacationSummary, setVacationSummary] = useState("");
 
+  // Utility to get today's date in yyyy-mm-dd format for the 'min' attribute
+  const todayIso = new Date().toISOString().split('T')[0];
+  
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 992) {
@@ -61,6 +66,72 @@ export default function DashboardLayout() {
     };
   }, [showFullDayModal, showPartTimeModal]);
 
+  // Utility: check if a yyyy-mm-dd string falls on Thursday (4) or Friday (5)
+  const isThursdayOrFriday = (isoDateString) => {
+    if (!isoDateString) return false;
+    // Use replace to ensure consistent parsing across browsers
+    const date = new Date(isoDateString.replace(/-/g, '/')); 
+    const dayIndex = date.getDay(); // 0=Sun ... 6=Sat
+    // Assuming the work week is Sat-Wed (0-3), and Thu/Fri (4/5) are the weekend
+    return dayIndex === 4 || dayIndex === 5; 
+  };
+  
+  /**
+   * NEW FUNCTION: Calculates the number of working days between two dates
+   * excluding Thursday (4) and Friday (5).
+   */
+  const calculateVacationDays = (start, end) => {
+    if (!start || !end) return 0;
+
+    const startDate = new Date(start.replace(/-/g, '/'));
+    const endDate = new Date(end.replace(/-/g, '/'));
+
+    if (startDate > endDate) return 0;
+
+    let totalDays = 0;
+    let currentDate = startDate;
+
+    while (currentDate <= endDate) {
+        const dayIndex = currentDate.getDay(); // 0=Sun ... 6=Sat
+        // Check if it's NOT Thursday (4) or Friday (5)
+        if (dayIndex !== 4 && dayIndex !== 5) {
+            totalDays++;
+        }
+        // Move to the next day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return totalDays;
+  };
+
+  // Effect to update the vacation summary message whenever dates change
+  useEffect(() => {
+    const { startDate, endDate } = formData.fullDay;
+
+    if (startDate && endDate && new Date(startDate.replace(/-/g, '/')) <= new Date(endDate.replace(/-/g, '/'))) {
+        const days = calculateVacationDays(startDate, endDate);
+        
+        // Format dates for display (e.g., 2025-07-06 to 6/7/2025)
+        const formatDisplayDate = (isoDate) => {
+            const [year, month, day] = isoDate.split('-');
+            return `${parseInt(day)}/${parseInt(month)}/${year}`;
+        };
+
+        const formattedStart = formatDisplayDate(startDate);
+        const formattedEnd = formatDisplayDate(endDate);
+
+        if (days > 0) {
+            setVacationSummary(`سوف تكون إجازتك ${days} أيام عمل من تاريخ ${formattedStart} إلى ${formattedEnd}.`);
+        } else if (days === 0 && new Date(startDate.replace(/-/g, '/')).getTime() === new Date(endDate.replace(/-/g, '/')).getTime()) {
+            setVacationSummary("هذا اليوم إجازة رسمية (خميس أو جمعة) أو أن المدة المختارة لا تتضمن أيام عمل.");
+        } else {
+             setVacationSummary("الرجاء اختيار نطاق تاريخ صالح.");
+        }
+    } else {
+        setVacationSummary("");
+    }
+  }, [formData.fullDay.startDate, formData.fullDay.endDate]);
+
   // Form validation functions
   const validateFullDayForm = () => {
     const errors = {};
@@ -72,14 +143,55 @@ export default function DashboardLayout() {
     if (!endDate) {
       errors.endDate = "الرجاء إدخال تاريخ نهاية الإجازة";
     }
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+    if (startDate && endDate && new Date(startDate.replace(/-/g, '/')) > new Date(endDate.replace(/-/g, '/'))) {
       errors.dateRange = "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية";
     }
     if (!requestType) {
       errors.requestType = "الرجاء اختيار نوع الإجازة";
     }
+    // Re-check validity against the unselectable days before submission
+    if (startDate && isThursdayOrFriday(startDate)) {
+        errors.startDate = "لا يمكن اختيار يومي الخميس أو الجمعة";
+    }
+    if (endDate && isThursdayOrFriday(endDate)) {
+        errors.endDate = "لا يمكن اختيار يومي الخميس أو الجمعة";
+    }
+
+    // Crucial check: if days is 0, but dates are valid, we should not allow submission unless it's a single, valid day.
+    const workingDays = calculateVacationDays(startDate, endDate);
+    if (workingDays === 0 && (new Date(startDate.replace(/-/g, '/')).getTime() <= new Date(endDate.replace(/-/g, '/')).getTime())) {
+        if (startDate && endDate) {
+             errors.dateRange = "المدة المختارة لا تحتوي على أيام عمل (قد تكون خميس وجمعة فقط).";
+        }
+    }
 
     return errors;
+  };
+
+  // Guard date changes for Full Day to prevent Thu/Fri selection
+  const handleFullDayDateChange = (field, value) => {
+    // Clear any previous general date range error
+    setFormErrors(prev => ({ ...prev, dateRange: "" }));
+
+    if (isThursdayOrFriday(value)) {
+      const fieldLabel = field === "startDate" ? "تاريخ بداية الإجازة" : "تاريخ نهاية الإجازة";
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: `${fieldLabel}: لا يمكن اختيار يومي الخميس أو الجمعة`
+      }));
+      setFormData(prev => ({
+        ...prev,
+        fullDay: { ...prev.fullDay, [field]: "" } // Clear the invalid date
+      }));
+      return;
+    }
+    
+    // valid day; apply and clear any previous error on this field
+    setFormData(prev => ({
+      ...prev,
+      fullDay: { ...prev.fullDay, [field]: value }
+    }));
+    setFormErrors(prev => ({ ...prev, [field]: "" }));
   };
 
   const validatePartTimeForm = () => {
@@ -88,6 +200,9 @@ export default function DashboardLayout() {
 
     if (!date) {
       errors.date = "الرجاء إدخال التاريخ";
+    }
+    if (date && isThursdayOrFriday(date)) {
+        errors.date = "لا يمكن اختيار يومي الخميس أو الجمعة";
     }
     if (!startTime) {
       errors.startTime = "الرجاء إدخال وقت البدء";
@@ -120,7 +235,8 @@ export default function DashboardLayout() {
     }
   };
 
-  // Form submission handlers
+  // Form submission handlers (omitted for brevity, assume unchanged logic)
+
   const handleFullDaySubmit = async (e) => {
     e.preventDefault();
     const errors = validateFullDayForm();
@@ -146,6 +262,7 @@ export default function DashboardLayout() {
           ...prev,
           fullDay: { startDate: "", endDate: "", requestType: "daily", description: "" }
         }));
+        setVacationSummary(""); // Reset summary
         setSubmitMessage("");
         setShowFullDayModal(false);
       }, 2000);
@@ -197,7 +314,7 @@ export default function DashboardLayout() {
       ...prev,
       fullDay: { ...prev.fullDay, [field]: value }
     }));
-    // Clear error when user starts typing
+    // Clear error when user starts typing/selecting a valid option
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: "" }));
     }
@@ -212,6 +329,26 @@ export default function DashboardLayout() {
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: "" }));
     }
+  };
+
+  // Guard date change for Part Time to prevent Thu/Fri selection
+  const handlePartTimeDateChange = (value) => {
+    if (isThursdayOrFriday(value)) {
+      setFormErrors(prev => ({
+        ...prev,
+        date: "التاريخ: لا يمكن اختيار يومي الخميس أو الجمعة"
+      }));
+      setFormData(prev => ({
+        ...prev,
+        partTime: { ...prev.partTime, date: "" }
+      }));
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      partTime: { ...prev.partTime, date: value }
+    }));
+    setFormErrors(prev => ({ ...prev, date: "" }));
   };
 
   // Pass open modal handlers to Home
@@ -267,7 +404,7 @@ export default function DashboardLayout() {
           </div>
         </div>
       </aside>
-      {sidebarOpen && <div className="sidebar-overlay visible" style={{  zIndex: 1001 }} onClick={() => setSidebarOpen(false)}></div>}
+      {sidebarOpen && <div className="sidebar-overlay visible" style={{ 	zIndex: 1001 }} onClick={() => setSidebarOpen(false)}></div>}
       <main className="main-content" style={{ zIndex: 1 }}>
         <header className="main-header">
           <button className="menu-toggle-btn" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><i className="fas fa-bars"></i></button>
@@ -376,8 +513,9 @@ export default function DashboardLayout() {
                   id="full-day-start-date" 
                   name="startDate" 
                   value={formData.fullDay.startDate}
-                  onChange={(e) => handleFullDayChange("startDate", e.target.value)}
+                  onChange={(e) => handleFullDayDateChange("startDate", e.target.value)}
                   onClick={handleDateInputClick}
+                  min={todayIso}
                   required 
                 />
                 {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
@@ -390,13 +528,31 @@ export default function DashboardLayout() {
                   id="full-day-end-date" 
                   name="endDate" 
                   value={formData.fullDay.endDate}
-                  onChange={(e) => handleFullDayChange("endDate", e.target.value)}
+                  onChange={(e) => handleFullDayDateChange("endDate", e.target.value)}
                   onClick={handleDateInputClick}
+                  min={formData.fullDay.startDate || todayIso}
                   required 
                 />
                 {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
                 {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
               </div>
+              
+              {/* NEW: Vacation Summary Message */}
+              {vacationSummary && (
+                <div className="form-group">
+                    <p style={{ 
+                        padding: '10px 15px', 
+                        backgroundColor: '#e9ecef', 
+                        borderRadius: '5px', 
+                        fontSize: '14px',
+                        textAlign: 'center',
+                        color: vacationSummary.includes("لا تحتوي") || vacationSummary.includes("إجازة رسمية") ? '#dc3545' : '#007bff'
+                    }}>
+                        <i className="fas fa-info-circle" style={{ marginLeft: '8px' }}></i>
+                        {vacationSummary}
+                    </p>
+                </div>
+              )}
               
               
               <div className="form-group">
@@ -456,8 +612,9 @@ export default function DashboardLayout() {
                   id="part-time-date" 
                   name="requestDate" 
                   value={formData.partTime.date}
-                  onChange={(e) => handlePartTimeChange("date", e.target.value)}
+                  onChange={(e) => handlePartTimeDateChange(e.target.value)}
                   onClick={handleDateInputClick}
+                  min={todayIso}
                   required 
                 />
                 {formErrors.date && <div className="error-message">{formErrors.date}</div>}

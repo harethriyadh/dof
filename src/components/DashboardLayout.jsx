@@ -10,7 +10,7 @@ import "../Home.css"; // Import Home CSS
 /**
  * تحسب تاريخ نهاية إجازة الزواج لمدة 14 يوماً، بدءاً من تاريخ البداية المحدد.
  * يستثني الحساب يومي الخميس (4) والجمعة (5) من عد الأيام الـ 14.
- * * @param {string} startDateString - تاريخ البداية المحدد في صيغة "YYYY-MM-DD".
+ * @param {string} startDateString - تاريخ البداية المحدد في صيغة "YYYY-MM-DD".
  * @returns {{endDate: string, message: string} | null} - تاريخ النهاية المحسوب والرسالة المطلوبة.
  */
 export const calculateMarriageLeaveEndDate = (startDateString) => {
@@ -93,6 +93,10 @@ export default function DashboardLayout() {
   const [submitMessage, setSubmitMessage] = useState("");
   // NEW STATE: To hold the calculated vacation summary message
   const [vacationSummary, setVacationSummary] = useState("");
+  // NEW STATE: When study leave range > 15 working days -> show admin message and hide date fields
+  const [showStudyAdminMessage, setShowStudyAdminMessage] = useState(false);
+  // NEW STATE: lock the endDate when marriage-end auto-calculated
+  const [marriageAutoEnd, setMarriageAutoEnd] = useState(false);
 
   // Utility to get today's date in yyyy-mm-dd format for the 'min' attribute
   const todayIso = new Date().toISOString().split('T')[0];
@@ -316,7 +320,7 @@ export default function DashboardLayout() {
   const isThursdayOrFriday = (isoDateString) => {
     if (!isoDateString) return false;
     // Use replace to ensure consistent parsing across browsers
-    const date = new Date(isoDateString.replace(/-/g, '/')); 
+    const date = new Date(isoDateString.replace(/-/g, '/'));
     const dayIndex = date.getDay(); // 0=Sun ... 6=Sat
     // Assuming the work week is Sat-Wed (0-3), and Thu/Fri (4/5) are the weekend
     return dayIndex === 4 || dayIndex === 5; 
@@ -350,9 +354,29 @@ export default function DashboardLayout() {
     return totalDays;
   };
 
+  /**
+   * NEW FUNCTION: Calculate calendar days inclusive between two yyyy-mm-dd dates.
+   * Used for the study-leave >15-days check (calendar days).
+   */
+  const calculateCalendarDaysInclusive = (startIso, endIso) => {
+    if (!startIso || !endIso) return 0;
+    const s = new Date(startIso.replace(/-/g, '/'));
+    const e = new Date(endIso.replace(/-/g, '/'));
+    if (s > e) return 0;
+    // +1 to include both start and end as days
+    const diff = Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return diff;
+  };
+
   // Effect to update the vacation summary message whenever dates change
   useEffect(() => {
     const { startDate, endDate } = formData.fullDay;
+
+    // If study > 15 flagged, we clear summary (we show admin message instead)
+    if (showStudyAdminMessage) {
+      setVacationSummary("");
+      return;
+    }
 
     if (startDate && endDate && new Date(startDate.replace(/-/g, '/')) <= new Date(endDate.replace(/-/g, '/'))) {
         const days = calculateVacationDays(startDate, endDate);
@@ -366,17 +390,28 @@ export default function DashboardLayout() {
         const formattedStart = formatDisplayDate(startDate);
         const formattedEnd = formatDisplayDate(endDate);
 
-        if (days > 0) {
-            setVacationSummary(`سوف تكون إجازتك ${days} أيام عمل من تاريخ ${formattedStart} إلى ${formattedEnd}.`);
-        } else if (days === 0 && new Date(startDate.replace(/-/g, '/')).getTime() === new Date(endDate.replace(/-/g, '/')).getTime()) {
-            setVacationSummary("هذا اليوم إجازة رسمية (خميس أو جمعة) أو أن المدة المختارة لا تتضمن أيام عمل.");
+        if (formData.fullDay.requestType === "marriage" && startDate) {
+            // For marriage leave, prefer the stable marriage message (14 workdays)
+            const marriageCalculation = calculateMarriageLeaveEndDate(startDate);
+            if (marriageCalculation && marriageCalculation.endDate) {
+              const formattedMarriageEnd = marriageCalculation.endDate;
+              setVacationSummary(`إجازة زواج: 14 يوم عمل تبدأ من ${formattedStart} وتنتهي في ${formattedMarriageEnd}.`);
+            } else {
+              setVacationSummary("");
+            }
         } else {
-             setVacationSummary("الرجاء اختيار نطاق تاريخ صالح.");
+            if (days > 0) {
+                setVacationSummary(`سوف تكون إجازتك ${days} أيام عمل من تاريخ ${formattedStart} إلى ${formattedEnd}.`);
+            } else if (days === 0 && new Date(startDate.replace(/-/g, '/')).getTime() === new Date(endDate.replace(/-/g, '/')).getTime()) {
+                setVacationSummary("هذا اليوم إجازة رسمية (خميس أو جمعة) أو أن المدة المختارة لا تتضمن أيام عمل.");
+            } else {
+                 setVacationSummary("الرجاء اختيار نطاق تاريخ صالح.");
+            }
         }
     } else {
         setVacationSummary("");
     }
-  }, [formData.fullDay.startDate, formData.fullDay.endDate]);
+  }, [formData.fullDay.startDate, formData.fullDay.endDate, formData.fullDay.requestType, showStudyAdminMessage]);
 
   // Form validation functions
   const validateFullDayForm = () => {
@@ -411,6 +446,14 @@ export default function DashboardLayout() {
         }
     }
 
+    // NEW: If study leave AND working days > 15 -> require direct administrative request
+    if (requestType === "study" && startDate && endDate) {
+      const working = calculateVacationDays(startDate, endDate);
+      if (working > 15) {
+        errors.requestType = "عزيزي منتسب جامعة السراج, للحصول على اجزة اكثر من 15 يوما, يجب ان تقدم طلبا بشكل مباشر الى قسم الادارية";
+      }
+    }
+
     return errors;
   };
 
@@ -432,6 +475,19 @@ export default function DashboardLayout() {
       return;
     }
     
+    // Special-case: if changing startDate while type=marriage => auto-calc endDate and lock it
+    if (field === "startDate" && formData.fullDay.requestType === "marriage") {
+      // compute marriage end date
+      const marriageCalculation = calculateMarriageLeaveEndDate(value);
+      setFormData(prev => ({
+        ...prev,
+        fullDay: { ...prev.fullDay, startDate: value, endDate: marriageCalculation ? marriageCalculation.endDate : "" }
+      }));
+      setFormErrors(prev => ({ ...prev, [field]: "" }));
+      setMarriageAutoEnd(true); // lock the end-date input
+      return;
+    }
+
     // valid day; apply and clear any previous error on this field
     setFormData(prev => {
       const newFormData = {
@@ -439,62 +495,45 @@ export default function DashboardLayout() {
         fullDay: { ...prev.fullDay, [field]: value }
       };
       
-      // Auto-calculate end date for marriage leave when start date changes
+      // Auto-calculate end date for marriage leave when start date changes (fallback if previous logic didn't run)
       if (field === "startDate" && prev.fullDay.requestType === "marriage" && value) {
         const marriageCalculation = calculateMarriageLeaveEndDate(value);
         if (marriageCalculation) {
           newFormData.fullDay.endDate = marriageCalculation.endDate;
+          setMarriageAutoEnd(true);
+        }
+      } else {
+        // if other fields are changed and requestType is not marriage, make sure the endDate lock is off
+        if (prev.fullDay.requestType !== "marriage") {
+          setMarriageAutoEnd(false);
         }
       }
       
+      // NEW: Study leave >15 working days check (exclude Thu/Fri)
+      const requestTypeNow = prev.fullDay.requestType; // requestType before change
+      const actualRequestType = requestTypeNow;
+
+      if (actualRequestType === "study") {
+        const startVal = field === "startDate" ? value : prev.fullDay.startDate;
+        const endVal = field === "endDate" ? value : prev.fullDay.endDate;
+
+        if (startVal && endVal) {
+          const workingDays = calculateVacationDays(startVal, endVal);
+          setShowStudyAdminMessage(workingDays > 15);
+        } else {
+          setShowStudyAdminMessage(false);
+        }
+      } else {
+        // If request type is not study, ensure admin message is off
+        setShowStudyAdminMessage(false);
+      }
+
       return newFormData;
     });
     setFormErrors(prev => ({ ...prev, [field]: "" }));
   };
 
-  const validatePartTimeForm = () => {
-    const errors = {};
-    const { date, startTime, endTime } = formData.partTime;
-
-    if (!date) {
-      errors.date = "الرجاء إدخال التاريخ";
-    }
-    if (date && isThursdayOrFriday(date)) {
-        errors.date = "لا يمكن اختيار يومي الخميس أو الجمعة";
-    }
-    if (!startTime) {
-      errors.startTime = "الرجاء إدخال وقت البدء";
-    }
-    if (!endTime) {
-      errors.endTime = "الرجاء إدخال وقت الانتهاء";
-    }
-    if (startTime && endTime && startTime >= endTime) {
-      errors.timeRange = "وقت الانتهاء يجب أن يكون بعد وقت البدء";
-    }
-
-    return errors;
-  };
-
-  // Date input click handler to open calendar
-  const handleDateInputClick = (e) => {
-    // Prevent the default behavior and manually trigger the date picker
-    e.preventDefault();
-    
-    // Try to use the modern showPicker() method
-    if (e.target.showPicker) {
-      e.target.showPicker();
-    } else {
-      // Fallback for older browsers - focus the input to trigger the native picker
-      e.target.focus();
-      // Simulate a click on the calendar icon for older browsers
-      setTimeout(() => {
-        e.target.click();
-      }, 10);
-    }
-  };
-
-  // Form submission handlers (omitted for brevity, assume unchanged logic)
-
+  // Form submission handlers
   const handleFullDaySubmit = async (e) => {
     e.preventDefault();
     const errors = validateFullDayForm();
@@ -521,6 +560,8 @@ export default function DashboardLayout() {
           fullDay: { startDate: "", endDate: "", requestType: "daily", description: "" }
         }));
         setVacationSummary(""); // Reset summary
+        setShowStudyAdminMessage(false);
+        setMarriageAutoEnd(false);
         setSubmitMessage("");
         setShowFullDayModal(false);
       }, 2000);
@@ -566,6 +607,47 @@ export default function DashboardLayout() {
     }
   };
 
+  const validatePartTimeForm = () => {
+    const errors = {};
+    const { date, startTime, endTime } = formData.partTime;
+
+    if (!date) {
+      errors.date = "الرجاء إدخال التاريخ";
+    }
+    if (date && isThursdayOrFriday(date)) {
+        errors.date = "لا يمكن اختيار يومي الخميس أو الجمعة";
+    }
+    if (!startTime) {
+      errors.startTime = "الرجاء إدخال وقت البدء";
+    }
+    if (!endTime) {
+      errors.endTime = "الرجاء إدخال وقت الانتهاء";
+    }
+    if (startTime && endTime && startTime >= endTime) {
+      errors.timeRange = "وقت الانتهاء يجب أن يكون بعد وقت البدء";
+    }
+
+    return errors;
+  };
+
+  // Date input click handler to open calendar
+  const handleDateInputClick = (e) => {
+    // Prevent the default behavior and manually trigger the date picker
+    e.preventDefault();
+    
+    // Try to use the modern showPicker() method
+    if (e.target.showPicker) {
+      e.target.showPicker();
+    } else {
+      // Fallback for older browsers - focus the input to trigger the native picker
+      e.target.focus();
+      // Simulate a click on the calendar icon for older browsers
+      setTimeout(() => {
+        e.target.click();
+      }, 10);
+    }
+  };
+
   // Input change handlers
   const handleFullDayChange = (field, value) => {
     setFormData(prev => {
@@ -579,17 +661,38 @@ export default function DashboardLayout() {
         const marriageCalculation = calculateMarriageLeaveEndDate(prev.fullDay.startDate);
         if (marriageCalculation) {
           newFormData.fullDay.endDate = marriageCalculation.endDate;
+          setMarriageAutoEnd(true);
         }
       } else if (field === "startDate" && prev.fullDay.requestType === "marriage" && value) {
         const marriageCalculation = calculateMarriageLeaveEndDate(value);
         if (marriageCalculation) {
           newFormData.fullDay.endDate = marriageCalculation.endDate;
+          setMarriageAutoEnd(true);
         }
+      } else if (field === "requestType" && value !== "marriage") {
+        // if switching away from marriage, unlock end date
+        setMarriageAutoEnd(false);
       }
       
       return newFormData;
     });
     
+    // NEW: When user selects requestType = 'study', check working-days span > 15
+    if (field === "requestType") {
+      if (value === "study") {
+        const start = formData.fullDay.startDate;
+        const end = formData.fullDay.endDate;
+        if (start && end) {
+          const working = calculateVacationDays(start, end);
+          setShowStudyAdminMessage(working > 15);
+        } else {
+          setShowStudyAdminMessage(false);
+        }
+      } else {
+        setShowStudyAdminMessage(false);
+      }
+    }
+
     // Clear error when user starts typing/selecting a valid option
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: "" }));
@@ -899,16 +1002,7 @@ export default function DashboardLayout() {
                     />
                     <span className="radio-text">مرضية</span>
                   </label>
-                  <label className="radio-label">
-                    <input 
-                      type="radio" 
-                      name="fullDayRequestType" 
-                      value="study" 
-                      checked={formData.fullDay.requestType === "study"}
-                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
-                    />
-                    <span className="radio-text">دراسية</span>
-                  </label>
+                  
                   <label className="radio-label">
                     <input 
                       type="radio" 
@@ -929,43 +1023,128 @@ export default function DashboardLayout() {
                     />
                     <span className="radio-text">زواج</span>
                   </label>
+                  <label className="radio-label">
+                    <input 
+                      type="radio" 
+                      name="fullDayRequestType" 
+                      value="study" 
+                      checked={formData.fullDay.requestType === "study"}
+                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                    />
+                    <span className="radio-text">دراسية</span>
+                  </label>
+                  <label className="radio-label">
+                    <input 
+                      type="radio" 
+                      name="fullDayRequestType" 
+                      value="motherhood" 
+                      checked={formData.fullDay.requestType === "motherhood"}
+                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                    />
+                    <span className="radio-text">إجازة أمومة</span>
+                  </label>
+                  <label className="radio-label">
+                    <input 
+                      type="radio" 
+                      name="fullDayRequestType" 
+                      value="birth" 
+                      checked={formData.fullDay.requestType === "birth"}
+                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                    />
+                    <span className="radio-text">ولادة</span>
+                  </label>
                 </div>
                 {formErrors.requestType && <div className="error-message">{formErrors.requestType}</div>}
+                {formData.fullDay.requestType === "sick" && (
+                  <div style={{ 
+                    color: '#000000', 
+                    fontSize: '14px', 
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    backgroundColor: '#d4edda',
+                    border: '1px solid #c3e6cb',
+                    borderRadius: '4px'
+                  }}>
+                    عزيزي منتسب جامعة السراج، يرجى تزويد قسم الادارية بوثيقة تثبت حالتك المرضية في اقرب فرصة ممكنه لتجنب اعتبار الاجازة ملغية
+                  </div>
+                )}
               </div>
               
-              <div className={`form-group ${formErrors.startDate ? "error" : ""}`}>
-                <label htmlFor="full-day-start-date">تاريخ بداية الإجازة:</label>
-                <input 
-                  type="date" 
-                  id="full-day-start-date" 
-                  name="startDate" 
-                  value={formData.fullDay.startDate}
-                  onChange={(e) => handleFullDayDateChange("startDate", e.target.value)}
-                  onClick={handleDateInputClick}
-                  min={todayIso}
-                  required 
-                />
-                {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
-              </div>
-              
-              <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
-                <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
-                <input 
-                  type="date" 
-                  id="full-day-end-date" 
-                  name="endDate" 
-                  value={formData.fullDay.endDate}
-                  onChange={(e) => handleFullDayDateChange("endDate", e.target.value)}
-                  onClick={handleDateInputClick}
-                  min={formData.fullDay.startDate || todayIso}
-                  required 
-                />
-                {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
-                {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
-              </div>
+              {/* START: show study-admin message if flagged (hide date fields) */}
+              {showStudyAdminMessage && (
+                <div className="form-group">
+                    <p style={{ 
+                        padding: '10px 15px', 
+                        backgroundColor: '#fff3cd', 
+                        border: '1px solid #ffeeba',
+                        borderRadius: '5px', 
+                        fontSize: '14px',
+                        textAlign: 'center',
+                        color: '#856404'
+                    }}>
+                        <i className="fas fa-exclamation-triangle" style={{ marginLeft: '8px' }}></i>
+                        عزيزي منتسب جامعة السراج, للحصول على اجزة اكثر من 15 يوما, يجب ان تقدم طلبا بشكل مباشر الى قسم الادارية
+                    </p>
+                </div>
+              )}
+              {/* END: study-admin message */}
+
+              {/* Render date inputs only when study-admin message is not shown */}
+              {!showStudyAdminMessage && (
+                <>
+                  <div className={`form-group ${formErrors.startDate ? "error" : ""}`}>
+                    <label htmlFor="full-day-start-date">تاريخ بداية الإجازة:</label>
+                    <input 
+                      type="date" 
+                      id="full-day-start-date" 
+                      name="startDate" 
+                      value={formData.fullDay.startDate}
+                      onChange={(e) => handleFullDayDateChange("startDate", e.target.value)}
+                      onClick={handleDateInputClick}
+                      min={todayIso}
+                      required 
+                    />
+                    {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
+                  </div>
+                  {/* Marriage Leave Auto-Calculation Message */}
+                  {formData.fullDay.requestType === "marriage" && formData.fullDay.startDate && formData.fullDay.endDate && (
+                    <div className="form-group">
+                        <p style={{ 
+                            padding: '10px 15px', 
+                            backgroundColor: '#d4edda', 
+                            border: '1px solid #c3e6cb',
+                            borderRadius: '5px', 
+                            fontSize: '14px',
+                            textAlign: 'center',
+                            color: 'black'
+                        }}>
+                            <i className="fas fa-heart" style={{ marginLeft: '8px' }}></i>
+                            تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (زواج) ليكون 14 يوم عمل (باستثناء الخميس والجمعة).
+                        </p>
+                    </div>
+                  )}
+
+                  <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
+                    <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
+                    <input 
+                      type="date" 
+                      id="full-day-end-date" 
+                      name="endDate" 
+                      value={formData.fullDay.endDate}
+                      onChange={(e) => handleFullDayDateChange("endDate", e.target.value)}
+                      onClick={handleDateInputClick}
+                      min={formData.fullDay.startDate || todayIso}
+                      required 
+                      disabled={marriageAutoEnd}  // <-- locked when auto-calculated for marriage
+                    />
+                    {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
+                    {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
+                  </div>
+                </>
+              )}
               
               {/* NEW: Vacation Summary Message */}
-              {vacationSummary && (
+              {vacationSummary && !showStudyAdminMessage && (
                 <div className="form-group">
                     <p style={{ 
                         padding: '10px 15px', 
@@ -981,23 +1160,7 @@ export default function DashboardLayout() {
                 </div>
               )}
               
-              {/* Marriage Leave Auto-Calculation Message */}
-              {formData.fullDay.requestType === "marriage" && formData.fullDay.startDate && formData.fullDay.endDate && (
-                <div className="form-group">
-                    <p style={{ 
-                        padding: '10px 15px', 
-                        backgroundColor: '#d4edda', 
-                        border: '1px solid #c3e6cb',
-                        borderRadius: '5px', 
-                        fontSize: '14px',
-                        textAlign: 'center',
-                        color: '#155724'
-                    }}>
-                        <i className="fas fa-heart" style={{ marginLeft: '8px' }}></i>
-                        تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (زواج) ليكون 14 يوماً عمل (باستثناء الخميس والجمعة).
-                    </p>
-                </div>
-              )}
+              
               
               
               <div className="form-group">
@@ -1033,7 +1196,7 @@ export default function DashboardLayout() {
           </div>
         </div>
       )}
-      
+
       {/* Part Time Request Modal */}
       {showPartTimeModal && (
         <div className="form-overlay visible" onClick={e => { if (e.target.classList.contains('form-overlay')) setShowPartTimeModal(false); }}>

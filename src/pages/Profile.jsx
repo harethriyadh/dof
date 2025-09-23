@@ -26,7 +26,8 @@ export default function Profile() {
         // Use the explicit API endpoint as requested
         const res = await fetch("http://localhost:3000/api/auth/profile", {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         });
         const json = await res.json();
@@ -40,12 +41,12 @@ export default function Profile() {
           throw new Error(json.message || 'Failed to fetch profile');
         }
 
-        // Use the documented response shape
-        const profile = json?.data?.profile;
-        if (!profile) {
+        // FIXED: Use the correct response structure
+        const user = json?.data?.user;
+        if (!user) {
           throw new Error('Invalid profile response');
         }
-        setUserData(profile);
+        setUserData(user);
       } catch (err) {
         console.error("Fetch error:", err);
         setError(err.message || "An unexpected error occurred.");
@@ -61,6 +62,7 @@ export default function Profile() {
     if (!userData) return [];
     
     const details = [
+      { label: "الجنس", value: userData.gender === 'male' ? 'ذكر' : userData.gender === 'female' ? 'أنثى' : userData.gender, icon: "fas fa-venus-mars" },
       { label: "الهاتف", value: userData.phone || userData.phoneNumber, icon: "fas fa-phone" },
       { label: "القسم", value: userData.department || userData.departmentName, icon: "fas fa-building" },
       { label: "الاختصاص", value: userData.specialist || userData.specialization, icon: "fas fa-user-md" },
@@ -97,7 +99,7 @@ export default function Profile() {
         <div className="profile-avatar" aria-hidden="true">
           <i className="fas fa-user-circle"></i>
         </div>
-        <h3>{userData.name || userData.fullName || userData.username}</h3>
+        <h3>{userData.full_name || userData.name || userData.username}</h3>
         <div className="profile-details">
           {profileDetails.map((detail, index) => (
             <div 

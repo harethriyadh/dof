@@ -1,1351 +1,503 @@
-import React, { useState, useEffect, useMemo } from "react";
-import AllRequests from "../pages/AllRequests";
-import RequestsManagement from "../pages/RequestsManagement";
-import Profile from "../pages/Profile";
-import Help from "../pages/Help";
-import "../dashboard.css"; // Import the CSS for the layout
-import "../Home.css"; // Import Home CSS
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+// import '../Auth.css'; // Assuming this file exists for custom styles
 
-// --- NEW UTILITY FUNCTION: Calculate marriage leave end date (14 workdays excluding Thu/Fri)
-/**
- * تحسب تاريخ نهاية إجازة الزواج لمدة 14 يوماً، بدءاً من تاريخ البداية المحدد.
- * يستثني الحساب يومي الخميس (4) والجمعة (5) من عد الأيام الـ 14.
- * @param {string} startDateString - تاريخ البداية المحدد في صيغة "YYYY-MM-DD".
- * @returns {{endDate: string, message: string} | null} - تاريخ النهاية المحسوب والرسالة المطلوبة.
- */
-export const calculateMarriageLeaveEndDate = (startDateString) => {
-    if (!startDateString) return null;
+export default function AuthPage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-    // دالة مساعدة لتنسيق التاريخ إلى YYYY-MM-DD
-    const toISODate = (date) => {
-        const year = date.getFullYear();
-        // getMonth() هي 0-indexed (يناير=0)، لذا نضيف 1
-        const month = String(date.getMonth() + 1).padStart(2, '0'); 
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-    
-    // تهيئة التاريخ: نستخدم منتصف اليوم (12:00) لتجنب مشاكل المناطق الزمنية (Timezone) التي قد تغير اليوم.
-    let currentDate = new Date(startDateString);
-    currentDate.setHours(12, 0, 0, 0); 
-    
-    let workingDaysCount = 0;
-    const requiredDays = 14;
-
-    // أيام الأسبوع في JavaScript: 0=الأحد، 1=الاثنين، 2=الثلاثاء، 3=الأربعاء، 4=الخميس، 5=الجمعة، 6=السبت
-    // نستثني الخميس (4) والجمعة (5)
-
-    while (workingDaysCount < requiredDays) {
-        // التحقق من اليوم الحالي
-        const dayOfWeek = currentDate.getDay(); 
-
-        // إذا لم يكن خميس (4) ولم يكن جمعة (5)، فهو يوم عمل
-        if (dayOfWeek !== 4 && dayOfWeek !== 5) {
-            workingDaysCount++;
-        }
-        
-        // إذا لم نصل إلى اليوم الرابع عشر المطلوب، نتقدم إلى اليوم التالي
-        if (workingDaysCount < requiredDays) {
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        // إذا وصلنا لليوم الرابع عشر، يتوقف التكرار ويكون التاريخ الحالي هو تاريخ النهاية.
-    }
-
-    // التاريخ الحالي هو تاريخ نهاية الإجازة (اليوم الرابع عشر المحسوب)
-    const endDate = toISODate(currentDate);
-
-    // الرسالة المطلوبة
-    const message = "تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (زواج) ليكون 14 يوماً عمل (باستثناء الخميس والجمعة).";
-
-    return { endDate, message };
-};
-// --- END NEW UTILITY FUNCTION
-
-const sectionTitles = {
-  dashboard: { title: "الرئيسية", icon: "fas fa-home" },
-  requests: { title: "طلباتي", icon: "fas fa-clipboard-list" },
-  management: { title: "إدارة الطلبات", icon: "fas fa-tasks" },
-  profile: { title: "الملف الشخصي", icon: "fas fa-user" },
-  help: { title: "المساعدة", icon: "fas fa-question-circle" },
-};
-
-export default function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("dashboard");
-  const [showFullDayModal, setShowFullDayModal] = useState(false);
-  const [showPartTimeModal, setShowPartTimeModal] = useState(false);
-  const [formData, setFormData] = useState({
-    fullDay: {
-      startDate: "",
-      endDate: "",
-      requestType: "daily",
-      description: ""
-    },
-    partTime: {
-      date: "",
-      startTime: "",
-      endTime: "",
-      reason: ""
-    }
+  // Login form state
+  const [loginData, setLoginData] = useState({
+    username: '',
+    password: ''
   });
-  const [formErrors, setFormErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
-  // NEW STATE: To hold the calculated vacation summary message
-  const [vacationSummary, setVacationSummary] = useState("");
-  // NEW STATE: When study leave range > 15 working days -> show admin message and hide date fields
-  const [showStudyAdminMessage, setShowStudyAdminMessage] = useState(false);
-  // NEW STATE: lock the endDate when marriage-end auto-calculated
-  const [marriageAutoEnd, setMarriageAutoEnd] = useState(false);
-  
-  // NEW STATE: User Gender and Leave Types
-  const [userGender, setUserGender] = useState(null);
-  const [leaveTypes, setLeaveTypes] = useState([
-    // Default/Fallback Types (before API load)
-    { id: '1', name: 'يومية', value: 'daily' },
-    { id: '2', name: 'مرضية', value: 'sick' },
-    { id: '3', name: 'حج او عمرة', value: 'hajj' },
-    { id: '4', name: 'زواج', value: 'marriage' },
-    { id: '5', name: 'دراسية', value: 'study' },
-    { id: '6', name: 'إجازة أمومة', value: 'motherhood' },
-    { id: '7', name: 'ولادة', value: 'birth' }
-  ]);
+
+  // Register form state - ADDED 'gender' HERE
+  const [registerData, setRegisterData] = useState({
+    full_name: '',
+    username: '',
+    password: '',
+    phone: '',
+    gender: '', // New field added
+    specialist: '',
+    college: '',
+    department: '',
+    role: 'employee'
+  });
+
+  const navigate = useNavigate();
 
 
-  // Utility to get today's date in yyyy-mm-dd format for the 'min' attribute
-  const todayIso = new Date().toISOString().split('T')[0];
-  
-  // Home component state management for holiday section
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedHoliday, setSelectedHoliday] = useState(null);
-  const [currentMonth, setCurrentMonth] = useState(1);
-  const [currentYear, setCurrentYear] = useState(2025);
-  
-  // --- NEW API & FILTERING LOGIC ---
-  
-  // API call to get user gender
-  const getUserGender = async () => {
-    try {
-        const response = await fetch('http://localhost:3000/api/auth/profile', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // Assumes token is in localStorage
-            }
-        });
-        if (!response.ok) throw new Error("Failed to fetch profile");
-        const data = await response.json();
-        return data.data.user.gender; // "male" or "female"
-    } catch (error) {
-        console.error('Error fetching user gender:', error);
-        return null; // Fallback
-    }
-  };
-
-  // API call to get all leave types
-  const getLeaveTypes = async () => {
-    try {
-        const response = await fetch('http://localhost:3000/api/leave-types');
-        if (!response.ok) throw new Error("Failed to fetch leave types");
-        const data = await response.json();
-        return data.data.map(type => ({
-          id: type.leave_type_id,
-          name: type.name,
-          // Map to the existing form value conventions
-          value: type.name === 'إجازة سنوية' ? 'daily' // assuming 'إجازة سنوية' maps to 'daily'
-                 : type.name === 'إجازة مرضية' ? 'sick'
-                 : type.name === 'حج أو عمرة' ? 'hajj'
-                 : type.name === 'إجازة زواج' ? 'marriage'
-                 : type.name === 'إجازة دراسية' ? 'study'
-                 : type.name === 'إجازة أمومة' ? 'motherhood'
-                 : type.name === 'ولادة' ? 'birth'
-                 : type.name.toLowerCase().replace(/\s/g, '-') // Default slug
-        })); 
-    } catch (error) {
-        console.error('Error fetching leave types:', error);
-        return []; // Fallback
-    }
-  };
-
-  // Filter leave types based on gender
-  const filterLeaveTypesByGender = (allTypes, gender) => {
-    if (gender === 'male') {
-        return allTypes.filter(type => 
-            type.name !== 'إجازة أمومة' && type.name !== 'ولادة'
-        );
-    }
-    return allTypes; // Show all for female or unknown gender
-  };
-
-  // Effect to load data on mount
-  useEffect(() => {
-    const loadData = async () => {
-        const gender = await getUserGender();
-        setUserGender(gender);
-
-        const allTypes = await getLeaveTypes();
-        // Use a more robust mapping for hardcoded types if API fails or is slow
-        const defaultTypes = [
-            { id: 'daily', name: 'يومية', value: 'daily' },
-            { id: 'sick', name: 'مرضية', value: 'sick' },
-            { id: 'hajj', name: 'حج او عمرة', value: 'hajj' },
-            { id: 'marriage', name: 'زواج', value: 'marriage' },
-            { id: 'study', name: 'دراسية', value: 'study' },
-            { id: 'motherhood', name: 'إجازة أمومة', value: 'motherhood' },
-            { id: 'birth', name: 'ولادة', value: 'birth' }
-        ];
-
-        const typesToFilter = allTypes.length > 0 ? allTypes : defaultTypes;
-
-        const filteredTypes = filterLeaveTypesByGender(typesToFilter, gender);
-        setLeaveTypes(filteredTypes);
-        
-        // Ensure that the current selected requestType is still valid
-        if (!filteredTypes.some(t => t.value === formData.fullDay.requestType)) {
-            // Set to a valid default if the current selection was filtered out
-            setFormData(prev => ({
-                ...prev,
-                fullDay: { ...prev.fullDay, requestType: filteredTypes[0]?.value || 'daily' }
-            }));
-        }
-    };
-    loadData();
-  }, []); // Run only on mount
-  
-  // --- END NEW API & FILTERING LOGIC ---
-
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 992) {
-        setSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Prevent body scrolling when modals are open
-  useEffect(() => {
-    if (showFullDayModal || showPartTimeModal) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-
-    // Cleanup function to remove class when component unmounts
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [showFullDayModal, showPartTimeModal]);
-
-  // Set current month and year on component mount
-  useEffect(() => {
-    const now = new Date();
-    setCurrentMonth(now.getMonth() + 1);
-    setCurrentYear(now.getFullYear());
-  }, []);
-
-  // Holiday data for each month and year
-  const holidays = {
-    '1-2025': [
-      {
-        name: "رأس السنة الميلادية",
-        start_date: "2025-01-01",
-        end_date: "2025-01-01",
-        description: "احتفال ببداية السنة الجديدة"
-      },
-      {
-        name: "يوم الجيش العراقي",
-        start_date: "2025-01-06",
-        end_date: "2025-01-06",
-        description: "الاحتفال بتأسيس الجيش العراقي"
-      }
+  // Colleges and their departments (dependent dropdown data)
+  const collegesMap = {
+    'الرئاسة': [
+      'تكنولوجيا المعلومات',
+      'قسم التسجل وشؤون الطلبة',
+      'قسم الادارية',
+      'قسم القانونية',
+      'مكتب رئيس الجامعة',
+      'قسم الاعلام',
+      'قسم المتابعة',
+      'قسم الديوان',
+      'قسم الدراسات والتخطيط',
+      'مكتب المساعد العلمي'
     ],
-    '2-2025': [],
-    '3-2025': [
-      {
-        name: "يوم نوروز",
-        start_date: "2025-03-21",
-        end_date: "2025-03-21",
-        description: "يوم رأس السنة الكردية وعيد الربيع"
-      }
+    'كلية الادارة والاقتصاد': [
+      'قسم المحاسبة',
+      'قسم ادارة الاعمال',
+      'قسم المالية والمصرفية'
     ],
-    '4-2025': [
-      {
-        name: "عيد الفطر",
-        start_date: "2025-04-01",
-        end_date: "2025-04-03",
-        description: "عيد الفطر المبارك بعد شهر رمضان"
-      }
-    ],
-    '5-2025': [
-      {
-        name: "عيد العمال",
-        start_date: "2025-05-01",
-        end_date: "2025-05-01",
-        description: "يوم العمال العالمي"
-      }
-    ],
-    '6-2025': [ 
-      {
-        name: "عيد الأضحى",
-        start_date: "2025-06-08",
-        end_date: "2025-06-11",
-        description: "عيد الأضحى المبارك"
-      }
-    ],
-    '7-2025': [
-      {
-        name: "رأس السنة الهجرية",
-        start_date: "2025-07-01",
-        end_date: "2025-07-01",
-        description: "بداية السنة الهجرية الجديدة"
-      },
-      {
-        name: "ثورة 14 تموز",
-        start_date: "2025-07-14",
-        end_date: "2025-07-14",
-        description: "ذكرى ثورة 14 تموز وتأسيس الجمهورية العراقية"
-      }
-    ],
-    '8-2025': [],
-    '9-2025': [
-      {
-        name: "عيد المولد النبوي",
-        start_date: "2025-09-05",
-        end_date: "2025-09-05",
-        description: "مولد النبي محمد صلى الله عليه وسلم"
-      }
-    ],
-    '10-2025': [
-      {
-        name: "عيد وطني عراقي",
-        start_date: "2025-10-03",
-        end_date: "2025-10-03",
-        description: "الاحتفال بيوم الاستقلال عن الانتداب البريطاني"
-      }
-    ],
-    '11-2025': [],
-    '12-2025': [
-      {
-        name: "عيد الميلاد المجيد",
-        start_date: "2025-12-25",
-        end_date: "2025-12-25",
-        description: "عيد الميلاد المجيد"
-      }
+    'كلية طب الاسنان': [],
+    'كلية التقنيات الصحية والطبية': [
+      'قسم التخدير',
+      'قسم صناعة الاسنان',
+      'قسم الاشعة'
     ]
   };
+  const collegeOptions = Object.keys(collegesMap);
+  const departmentOptions = registerData.college && collegesMap[registerData.college]
+    ? collegesMap[registerData.college]
+    : [];
 
-  // Arabic month names
-  const arabicMonths = {
-    1: "يناير",
-    2: "فبراير",
-    3: "مارس",
-    4: "أبريل",
-    5: "مايو",
-    6: "يونيو",
-    7: "يوليو",
-    8: "أغسطس",
-    9: "سبتمبر",
-    10: "أكتوبر",
-    11: "نوفمبر",
-    12: "ديسمبر"
-  };
+  // Helpers: validation for registration per spec - ADDED 'gender' VALIDATION
+  const validateRegister = (payload) => {
+    const errors = [];
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    const phoneRegex = /^[0-9+\-()\s]{7,20}$/;
 
-  // Get current month holidays
-  const currentMonthHolidays = holidays[`${currentMonth}-${currentYear}`] || [];
-
-  // Handle holiday click
-  const handleHolidayClick = (holiday) => {
-    setSelectedHoliday(holiday);
-    setIsModalOpen(true);
-  };
-
-  // Handle work message click
-  const handleWorkMessageClick = () => {
-    setSelectedHoliday(null);
-    setIsModalOpen(true);
-  };
-
-  // Close modal
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedHoliday(null);
-  };
-
-  // Format date for display
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = arabicMonths[date.getMonth() + 1];
-    const year = date.getFullYear();
-    return `${day} ${month} ${year}`;
-  };
-
-  // Mock data - in a real app, this would come from props or context
-  const lastRequestStatus = "approved";
-
-  // Memoized status class calculation
-  const statusClass = useMemo(() => {
-    switch (lastRequestStatus) {
-      case "rejected":
-        return "status-rejected";
-      case "pending":
-      default:
-        return "status-approved";
+    if (!payload.full_name || payload.full_name.trim().length < 2 || payload.full_name.trim().length > 100) {
+      errors.push({ field: 'full_name', message: 'الاسم الكامل يجب أن يكون بين 2 و 100 حرف' });
     }
-  }, [lastRequestStatus]);
+    if (!payload.username || payload.username.trim().length < 3 || payload.username.trim().length > 30 || !usernameRegex.test(payload.username)) {
+      errors.push({ field: 'username', message: 'اسم المستخدم يجب أن يكون 3-30 وiحروف/أرقام/شرطة سفلية فقط' });
+    }
+    if (!payload.password || payload.password.length < 6) {
+      errors.push({ field: 'password', message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+    }
+    if (!payload.phone || !phoneRegex.test(payload.phone)) {
+      errors.push({ field: 'phone', message: 'رقم الهاتف مطلوب ويجب أن يكون صالحاً' });
+    }
+    // New validation for gender
+    if (!payload.gender || !['male', 'female'].includes(String(payload.gender).toLowerCase())) {
+        errors.push({ field: 'gender', message: 'النوع (الجنس) مطلوب ويجب أن يكون ذكراً أو أنثى' });
+    }
 
-  // Memoized status message generation
-  const statusMessage = useMemo(() => {
-    const isOneDay = true; // Placeholder: true for one-day leave, false for a range.
-    const startDate = "9/4";
-    const endDate = "9/7";
+    const checkLen = (value, field) => {
+      if (value && (value.trim().length < 1 || value.trim().length > 100)) {
+        errors.push({ field, message: 'يجب أن يتراوح الطول بين 1 و 100 حرف' });
+      }
+    };
+    checkLen(payload.specialist, 'specialist');
+    checkLen(payload.college, 'college');
+    checkLen(payload.department, 'department');
 
-    const messages = {
-      approved: isOneDay
-        ? `تم قبول اجازتك ليوم ${startDate}`
-        : `تم قبول اجازتك من يوم ${startDate} إلى يوم ${endDate}`,
-      rejected: isOneDay
-        ? `تم رفض اجازتك ليوم ${startDate}`
-        : `تم رفض اجازتك من يوم ${startDate} إلى يوم ${endDate}`,
-      pending: isOneDay
-        ? `اجازتك ليوم ${startDate} قيد المراجعة`
-        : `اجازتك من يوم ${startDate} إلى يوم ${endDate} قيد المراجعة`
+    if (payload.role && !['employee','manager','admin'].includes(String(payload.role).toLowerCase())) {
+      errors.push({ field: 'role', message: 'الدور غير صالح' });
+    }
+
+    if (Array.isArray(payload.leave_balances)) {
+      payload.leave_balances.forEach((item, idx) => {
+        if (!item) return;
+        if (!item.leave_type_id) {
+          errors.push({ field: `leave_balances[${idx}].leave_type_id`, message: 'نوع الإجازة مطلوب' });
+        }
+        if (item.available_days == null || Number(item.available_days) < 0) {
+          errors.push({ field: `leave_balances[${idx}].available_days`, message: 'الأيام المتاحة يجب أن تكون 0 أو أكثر' });
+        }
+      });
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+
+    if (!loginData.username.trim() || !loginData.password.trim()) {
+      setError('يرجى إدخال اسم المستخدم وكلمة المرور');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('تم تسجيل الدخول بنجاح!');
+        if (data?.data?.token) localStorage.setItem('authToken', data.data.token);
+        if (data?.data?.user) localStorage.setItem('authUser', JSON.stringify(data.data.user));
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      } else {
+        setError(data.message || 'بيانات الدخول غير صحيحة');
+      }
+    } catch (err) {
+      setError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
+      console.error('Login failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+
+    // Prepare payload
+    const basePayload = { ...registerData };
+    basePayload.role = (basePayload.role || 'employee').toLowerCase();
+
+    // Filter empty optional fields
+    const cleaned = Object.fromEntries(
+      Object.entries(basePayload).filter(([key, value]) => {
+        // Keep required fields even if empty so validation catches them, 
+        // but for now, we follow the original logic of filtering out empties 
+        // while ensuring required fields are still checked by validateRegister.
+        // I will slightly adjust the filtering logic to exclude only optional empty fields if possible, 
+        // but sticking to the original developer's intent for now.
+        return value !== '' && value !== null && value !== undefined;
+      })
+    );
+    
+    // Ensure all fields needed for validation are present, even if empty, before validation
+    // For registration, 'full_name', 'username', 'password', 'phone', 'gender' are now considered required or validated.
+    // The previous filtering was risky. Let's make sure the required fields are in `cleaned`.
+    
+    // Temporarily forcing required fields back if they were filtered out:
+    const finalPayload = { ...cleaned, 
+      full_name: registerData.full_name,
+      username: registerData.username,
+      password: registerData.password,
+      phone: registerData.phone,
+      gender: registerData.gender // Make sure the new required field is here
     };
 
-    return messages[lastRequestStatus] || messages.pending;
-  }, [lastRequestStatus]);
 
-  // Memoized leave balance data
-  const leaveBalance = useMemo(() => ({
-    availableDays: 20,
-    availableHours: 160
-  }), []);
-
-  // Utility: check if a yyyy-mm-dd string falls on Thursday (4) or Friday (5)
-  const isThursdayOrFriday = (isoDateString) => {
-    if (!isoDateString) return false;
-    // Use replace to ensure consistent parsing across browsers
-    const date = new Date(isoDateString.replace(/-/g, '/'));
-    const dayIndex = date.getDay(); // 0=Sun ... 6=Sat
-    // Assuming the work week is Sat-Wed (0-3), and Thu/Fri (4/5) are the weekend
-    return dayIndex === 4 || dayIndex === 5; 
-  };
-  
-  /**
-   * NEW FUNCTION: Calculates the number of working days between two dates
-   * excluding Thursday (4) and Friday (5).
-   */
-  const calculateVacationDays = (start, end) => {
-    if (!start || !end) return 0;
-
-    const startDate = new Date(start.replace(/-/g, '/'));
-    const endDate = new Date(end.replace(/-/g, '/'));
-
-    if (startDate > endDate) return 0;
-
-    let totalDays = 0;
-    let currentDate = startDate;
-
-    while (currentDate <= endDate) {
-        const dayIndex = currentDate.getDay(); // 0=Sun ... 6=Sat
-        // Check if it's NOT Thursday (4) or Friday (5)
-        if (dayIndex !== 4 && dayIndex !== 5) {
-            totalDays++;
-        }
-        // Move to the next day
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return totalDays;
-  };
-
-  /**
-   * NEW FUNCTION: Calculate calendar days inclusive between two yyyy-mm-dd dates.
-   * Used for the study-leave >15-days check (calendar days).
-   */
-  const calculateCalendarDaysInclusive = (startIso, endIso) => {
-    if (!startIso || !endIso) return 0;
-    const s = new Date(startIso.replace(/-/g, '/'));
-    const e = new Date(endIso.replace(/-/g, '/'));
-    if (s > e) return 0;
-    // +1 to include both start and end as days
-    const diff = Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return diff;
-  };
-
-  // Effect to update the vacation summary message whenever dates change
-  useEffect(() => {
-    const { startDate, endDate } = formData.fullDay;
-
-    // If study > 15 flagged, we clear summary (we show admin message instead)
-    if (showStudyAdminMessage) {
-      setVacationSummary("");
+    // Validate per guide
+    const { valid, errors } = validateRegister(finalPayload);
+    if (!valid) {
+      setError(errors.map(e => e.message).join(' - '));
+      setIsLoading(false);
       return;
     }
-
-    if (startDate && endDate && new Date(startDate.replace(/-/g, '/')) <= new Date(endDate.replace(/-/g, '/'))) {
-        const days = calculateVacationDays(startDate, endDate);
-        
-        // Format dates for display (e.g., 2025-07-06 to 6/7/2025)
-        const formatDisplayDate = (isoDate) => {
-            const [year, month, day] = isoDate.split('-');
-            return `${parseInt(day)}/${parseInt(month)}/${year}`;
-        };
-
-        const formattedStart = formatDisplayDate(startDate);
-        const formattedEnd = formatDisplayDate(endDate);
-
-        if (formData.fullDay.requestType === "marriage" && startDate) {
-            // For marriage leave, prefer the stable marriage message (14 workdays)
-            const marriageCalculation = calculateMarriageLeaveEndDate(startDate);
-            if (marriageCalculation && marriageCalculation.endDate) {
-              const formattedMarriageEnd = formatDisplayDate(marriageCalculation.endDate);
-              setVacationSummary(`إجازة زواج: 14 يوم عمل تبدأ من ${formattedStart} وتنتهي في ${formattedMarriageEnd}.`);
-            } else {
-              setVacationSummary("");
-            }
-        } else {
-            if (days > 0) {
-                setVacationSummary(`سوف تكون إجازتك ${days} أيام عمل من تاريخ ${formattedStart} إلى ${formattedEnd}.`);
-            } else if (days === 0 && new Date(startDate.replace(/-/g, '/')).getTime() === new Date(endDate.replace(/-/g, '/')).getTime()) {
-                setVacationSummary("هذا اليوم إجازة رسمية (خميس أو جمعة) أو أن المدة المختارة لا تتضمن أيام عمل.");
-            } else {
-                 setVacationSummary("الرجاء اختيار نطاق تاريخ صالح.");
-            }
-        }
-    } else {
-        setVacationSummary("");
-    }
-  }, [formData.fullDay.startDate, formData.fullDay.endDate, formData.fullDay.requestType, showStudyAdminMessage]);
-
-  // Form validation functions
-  const validateFullDayForm = () => {
-    const errors = {};
-    const { startDate, endDate, requestType } = formData.fullDay;
-
-    if (!startDate) {
-      errors.startDate = "الرجاء إدخال تاريخ بداية الإجازة";
-    }
-    if (!endDate) {
-      errors.endDate = "الرجاء إدخال تاريخ نهاية الإجازة";
-    }
-    if (startDate && endDate && new Date(startDate.replace(/-/g, '/')) > new Date(endDate.replace(/-/g, '/'))) {
-      errors.dateRange = "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية";
-    }
-    if (!requestType) {
-      errors.requestType = "الرجاء اختيار نوع الإجازة";
-    }
-    // Re-check validity against the unselectable days before submission
-    if (startDate && isThursdayOrFriday(startDate)) {
-        errors.startDate = "لا يمكن اختيار يومي الخميس أو الجمعة";
-    }
-    if (endDate && isThursdayOrFriday(endDate)) {
-        errors.endDate = "لا يمكن اختيار يومي الخميس أو الجمعة";
-    }
-
-    // Crucial check: if days is 0, but dates are valid, we should not allow submission unless it's a single, valid day.
-    const workingDays = calculateVacationDays(startDate, endDate);
-    if (workingDays === 0 && (new Date(startDate.replace(/-/g, '/')).getTime() <= new Date(endDate.replace(/-/g, '/')).getTime())) {
-        if (startDate && endDate) {
-             errors.dateRange = "المدة المختارة لا تحتوي على أيام عمل (قد تكون خميس وجمعة فقط).";
-        }
-    }
-
-    // NEW: If study leave AND working days > 15 -> require direct administrative request
-    if (requestType === "study" && startDate && endDate) {
-      const working = calculateVacationDays(startDate, endDate);
-      if (working > 15) {
-        errors.requestType = "عزيزي منتسب جامعة السراج, للحصول على اجزة اكثر من 15 يوما, يجب ان تقدم طلبا بشكل مباشر الى قسم الادارية";
-      }
-    }
-
-    return errors;
-  };
-
-  // Guard date changes for Full Day to prevent Thu/Fri selection
-  const handleFullDayDateChange = (field, value) => {
-    // Clear any previous general date range error
-    setFormErrors(prev => ({ ...prev, dateRange: "" }));
-
-    if (isThursdayOrFriday(value)) {
-      const fieldLabel = field === "startDate" ? "تاريخ بداية الإجازة" : "تاريخ نهاية الإجازة";
-      setFormErrors(prev => ({
-        ...prev,
-        [field]: `${fieldLabel}: لا يمكن اختيار يومي الخميس أو الجمعة`
-      }));
-      setFormData(prev => ({
-        ...prev,
-        fullDay: { ...prev.fullDay, [field]: "" } // Clear the invalid date
-      }));
-      return;
-    }
-    
-    // Special-case: if changing startDate while type=marriage => auto-calc endDate and lock it
-    if (field === "startDate" && formData.fullDay.requestType === "marriage") {
-      // compute marriage end date
-      const marriageCalculation = calculateMarriageLeaveEndDate(value);
-      setFormData(prev => ({
-        ...prev,
-        fullDay: { ...prev.fullDay, startDate: value, endDate: marriageCalculation ? marriageCalculation.endDate : "" }
-      }));
-      setFormErrors(prev => ({ ...prev, [field]: "" }));
-      setMarriageAutoEnd(true); // lock the end-date input
-      return;
-    }
-
-    // valid day; apply and clear any previous error on this field
-    setFormData(prev => {
-      const newFormData = {
-        ...prev,
-        fullDay: { ...prev.fullDay, [field]: value }
-      };
-      
-      // Auto-calculate end date for marriage leave when start date changes (fallback if previous logic didn't run)
-      if (field === "startDate" && prev.fullDay.requestType === "marriage" && value) {
-        const marriageCalculation = calculateMarriageLeaveEndDate(value);
-        if (marriageCalculation) {
-          newFormData.fullDay.endDate = marriageCalculation.endDate;
-          setMarriageAutoEnd(true);
-        }
-      } else {
-        // if other fields are changed and requestType is not marriage, make sure the endDate lock is off
-        if (prev.fullDay.requestType !== "marriage") {
-          setMarriageAutoEnd(false);
-        }
-      }
-      
-      // NEW: Study leave >15 working days check (exclude Thu/Fri)
-      const requestTypeNow = prev.fullDay.requestType; // requestType before change
-      const actualRequestType = requestTypeNow;
-
-      if (actualRequestType === "study") {
-        const startVal = field === "startDate" ? value : prev.fullDay.startDate;
-        const endVal = field === "endDate" ? value : prev.fullDay.endDate;
-
-        if (startVal && endVal) {
-          const workingDays = calculateVacationDays(startVal, endVal);
-          setShowStudyAdminMessage(workingDays > 15);
-        } else {
-          setShowStudyAdminMessage(false);
-        }
-      } else {
-        // If request type is not study, ensure admin message is off
-        setShowStudyAdminMessage(false);
-      }
-
-      return newFormData;
-    });
-    setFormErrors(prev => ({ ...prev, [field]: "" }));
-  };
-
-  // Form submission handlers
-  const handleFullDaySubmit = async (e) => {
-    e.preventDefault();
-    const errors = validateFullDayForm();
-    
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSubmitMessage("تم إرسال طلب إجازة يوم كامل بنجاح!");
-      console.log('Full Day Off Request Data:', formData.fullDay);
-      
-      // Reset form and close modal after success
-      setTimeout(() => {
-        setFormData(prev => ({
-          ...prev,
-          fullDay: { startDate: "", endDate: "", requestType: leaveTypes[0]?.value || "daily", description: "" } // Reset to first available type
-        }));
-        setVacationSummary(""); // Reset summary
-        setShowStudyAdminMessage(false);
-        setMarriageAutoEnd(false);
-        setSubmitMessage("");
-        setShowFullDayModal(false);
-      }, 2000);
-    } catch {
-      setSubmitMessage("حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Use the cleaned object for the API request (which removes empty optional fields)
+        body: JSON.stringify(cleaned), 
+      });
 
-  const handlePartTimeSubmit = async (e) => {
-    e.preventDefault();
-    const errors = validatePartTimeForm();
-    
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
+      const data = await response.json();
 
-    setIsSubmitting(true);
-    setFormErrors({});
-
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSubmitMessage("تم إرسال طلب إجازة جزئية بنجاح!");
-      console.log('Part Time Off Request Data:', formData.partTime);
-      
-      // Reset form and close modal after success
-      setTimeout(() => {
-        setFormData(prev => ({
-          ...prev,
-          partTime: { date: "", startTime: "", endTime: "", reason: "" }
-        }));
-        setSubmitMessage("");
-        setShowPartTimeModal(false);
-      }, 2000);
-    } catch {
-      setSubmitMessage("حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const validatePartTimeForm = () => {
-    const errors = {};
-    const { date, startTime, endTime } = formData.partTime;
-
-    if (!date) {
-      errors.date = "الرجاء إدخال التاريخ";
-    }
-    if (date && isThursdayOrFriday(date)) {
-        errors.date = "لا يمكن اختيار يومي الخميس أو الجمعة";
-    }
-    if (!startTime) {
-      errors.startTime = "الرجاء إدخال وقت البدء";
-    }
-    if (!endTime) {
-      errors.endTime = "الرجاء إدخال وقت الانتهاء";
-    }
-    if (startTime && endTime && startTime >= endTime) {
-      errors.timeRange = "وقت الانتهاء يجب أن يكون بعد وقت البدء";
-    }
-
-    return errors;
-  };
-
-  // Date input click handler to open calendar
-  const handleDateInputClick = (e) => {
-    // Prevent the default behavior and manually trigger the date picker
-    e.preventDefault();
-    
-    // Try to use the modern showPicker() method
-    if (e.target.showPicker) {
-      e.target.showPicker();
-    } else {
-      // Fallback for older browsers - focus the input to trigger the native picker
-      e.target.focus();
-      // Simulate a click on the calendar icon for older browsers
-      setTimeout(() => {
-        e.target.click();
-      }, 10);
-    }
-  };
-
-  // Input change handlers
-  const handleFullDayChange = (field, value) => {
-    setFormData(prev => {
-      const newFormData = {
-        ...prev,
-        fullDay: { ...prev.fullDay, [field]: value }
-      };
-      
-      // Auto-calculate end date for marriage leave
-      if (field === "requestType" && value === "marriage" && prev.fullDay.startDate) {
-        const marriageCalculation = calculateMarriageLeaveEndDate(prev.fullDay.startDate);
-        if (marriageCalculation) {
-          newFormData.fullDay.endDate = marriageCalculation.endDate;
-          setMarriageAutoEnd(true);
-        }
-      } else if (field === "startDate" && prev.fullDay.requestType === "marriage" && value) {
-        const marriageCalculation = calculateMarriageLeaveEndDate(value);
-        if (marriageCalculation) {
-          newFormData.fullDay.endDate = marriageCalculation.endDate;
-          setMarriageAutoEnd(true);
-        }
-      } else if (field === "requestType" && value !== "marriage") {
-        // if switching away from marriage, unlock end date
-        setMarriageAutoEnd(false);
-      }
-      
-      return newFormData;
-    });
-    
-    // NEW: When user selects requestType = 'study', check working-days span > 15
-    if (field === "requestType") {
-      if (value === "study") {
-        const start = formData.fullDay.startDate;
-        const end = formData.fullDay.endDate;
-        if (start && end) {
-          const working = calculateVacationDays(start, end);
-          setShowStudyAdminMessage(working > 15);
-        } else {
-          setShowStudyAdminMessage(false);
-        }
+      if (response.ok) {
+        setSuccess('تم إنشاء الحساب بنجاح!');
+        if (data?.data?.token) localStorage.setItem('authToken', data.data.token);
+        if (data?.data?.user) localStorage.setItem('authUser', JSON.stringify(data.data.user));
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      } else if (response.status === 409) {
+        setError('اسم المستخدم موجود بالفعل. يرجى اختيار اسم آخر.');
       } else {
-        setShowStudyAdminMessage(false);
+        const errorMessage = Array.isArray(data.errors) && data.errors.length > 0
+          ? data.errors.map(err => (err.message || `${err.field}: غير صالح`)).join(' - ')
+          : data.message || 'حدث خطأ في إنشاء الحساب.';
+        setError(errorMessage);
       }
-    }
-
-    // Clear error when user starts typing/selecting a valid option
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  const handlePartTimeChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      partTime: { ...prev.partTime, [field]: value }
-    }));
-    // Clear error when user starts typing
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: "" }));
+    } catch (err) {
+      setError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
+      console.error('Registration failed:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Guard date change for Part Time to prevent Thu/Fri selection
-  const handlePartTimeDateChange = (value) => {
-    if (isThursdayOrFriday(value)) {
-      setFormErrors(prev => ({
-        ...prev,
-        date: "التاريخ: لا يمكن اختيار يومي الخميس أو الجمعة"
-      }));
-      setFormData(prev => ({
-        ...prev,
-        partTime: { ...prev.partTime, date: "" }
-      }));
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      partTime: { ...prev.partTime, date: value }
-    }));
-    setFormErrors(prev => ({ ...prev, date: "" }));
-  };
-
-  // Pass open modal handlers to Home
-  const renderSection = () => {
-    switch (activeSection) {
-      case "dashboard":
-        return (
-          <div>
-            <div className="page-welcome">
-              <h2>مرحباً بك في لوحة التحكم</h2>
-              <p>إدارة طلبات الإجازة والمراقبة اليومية</p>
-            </div>
-            <div className="cards-section">
-              {/* The Last Request Status Card: */}
-              <div className={`card status-last-request card-hover ${statusClass}`}>
-                <div className="card-content">
-                  <span className="request-status-message">
-                    {statusMessage}
-                  </span>
-                </div>
-              </div>
-
-              {/* Leave Balance Card */}
-              <div className="card leave-balance-card-three-col card-hover">
-                <div className="summary-section">
-                  <div className="summary-main-value">
-                    الاجازات<br />المتـــاحة
-                  </div>
-                </div>
-                <div className="summary-section">
-                  <div className="summary-main-value summary-main-value-green">
-                    {leaveBalance.availableDays}
-                  </div>
-                  <div className="summary-label">أيام الإجازة</div>
-                </div>
-                <div className="summary-section no-border">
-                  <div className="summary-main-value summary-main-value-orange">
-                    {leaveBalance.availableHours}
-                  </div>
-                  <div className="summary-label">ساعات الإجازة</div>
-                </div>
-              </div>
-
-              {/* START OF NEW WRAPPER GROUP FOR SIDE-BY-SIDE LAYOUT */}
-              <div className="request-holiday-group">
-
-                {/* The New Request Card: */}
-                <div className="card new-request-card card-hover">
-                  <div className="card-content">
-                    <h3 className="card-title">إنشاء طلب جديد</h3>
-                    <button
-                      className="new-request-btn"
-                      id="open-full-day-request-form-btn"
-                      onClick={() => setShowFullDayModal(true)}
-                      aria-label="فتح نموذج طلب إجازة يوم كامل"
-                    >
-                      طلب إجازة
-                    </button>
-                    <button
-                      className="new-request-btn new-request-btn-secondary"
-                      id="open-part-time-request-form-btn"
-                      onClick={() => setShowPartTimeModal(true)}
-                      aria-label="فتح نموذج طلب إجازة جزئية"
-                    >
-                      <span className="icon" aria-hidden="true">🕒</span>  طلب إجازة جزئية
-                    </button>
-                  </div>
-                </div>
-
-                {/* Holiday Card */}
-                <div className="card holiday-card card-hover" style={{ direction: 'rtl' }}>
-                  <div className="card-content">
-                    {/* Corrected month display using the object */}
-                    <h3 className="card-title"> الإجازات الرسمية لهذا الشهر - {arabicMonths[currentMonth]}/{currentYear}</h3> 
-                    
-                    <div className="holiday-grid">
-                      {currentMonthHolidays.length > 0 ? (
-                        currentMonthHolidays.map((holiday, index) => (
-                          <div
-                            key={index}
-                            className={`holiday-box ${index % 2 === 0 ? 'rotate-right' : 'rotate-left'}`}
-                            onClick={() => handleHolidayClick(holiday)}
-                          >
-                            <h3 className="holiday-name">{holiday.name}</h3>
-                            <p className="holiday-date">
-                              {holiday.start_date === holiday.end_date
-                                ? formatDate(holiday.start_date)
-                                : `${formatDate(holiday.start_date)} - ${formatDate(holiday.end_date)}`
-                              }
-                            </p>
-                            <p className="holiday-description">{holiday.description}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <div
-                          className="no-holiday-box rotate-right"
-                          onClick={handleWorkMessageClick}
-                        >
-                          <h3 className="no-holiday-title">لا توجد إجازات رسمية</h3>
-                          <p className="no-holiday-message">هذا الشهر مليء بالعمل والإنجازات! 💪</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* END OF NEW WRAPPER GROUP */}
-            </div>
-
-            {/* Modal */}
-            {isModalOpen && (
-              <div className="modal-overlay" onClick={closeModal}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <button className="modal-close" onClick={closeModal}>
-                    &times;
-                  </button>
-
-                  {selectedHoliday ? (
-                    <div className="holiday-modal">
-                      <div className="holiday-slideshow">
-                        {[...Array(5)].map((_, index) => (
-                          <img
-                            key={index}
-                            src={`https://picsum.photos/400/300?random=${index + 1}`}
-                            alt={`صورة ${index + 1}`}
-                            className="slideshow-image"
-                            style={{
-                              animationDelay: `${index * 0.2}s`
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div className="holiday-details">
-                        <h2 className="modal-holiday-name">{selectedHoliday.name}</h2>
-                        <p className="modal-holiday-date">
-                          {selectedHoliday.start_date === selectedHoliday.end_date
-                            ? formatDate(selectedHoliday.start_date)
-                            : `${formatDate(selectedHoliday.start_date)} - ${formatDate(selectedHoliday.end_date)}`
-                          }
-                        </p>
-                        <p className="modal-holiday-description">{selectedHoliday.description}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="work-message-modal">
-                      <div className="work-message-content">
-                        <p>🎯 العمل الجاد هو مفتاح النجاح!</p>
-                        <p>💪 كل يوم عمل هو خطوة نحو تحقيق أهدافك</p>
-                        <p>🌟 استغل هذا الشهر لتحقيق إنجازات رائعة</p>
-                        <p>🚀 أنت قادر على تحقيق أهدافك!</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      case "requests":
-        return <AllRequests />;
-      case "management":
-        return <RequestsManagement />;
-      case "profile":
-        return <Profile />;
-      case "help":
-        return <Help />;
-      default:
-        return null;
+  const handleInputChange = (formType, field, value) => {
+    if (formType === 'login') {
+      setLoginData(prev => ({ ...prev, [field]: value }));
+    } else {
+      setRegisterData(prev => ({ ...prev, [field]: value }));
     }
   };
+
 
   return (
-    <div className="dashboard-container">
-      <aside className={`sidebar${sidebarOpen ? " open" : ""}`} style={{ zIndex: 1002 }}>
-        <button className="close-sidebar-btn" onClick={() => setSidebarOpen(false)}><i className="fas fa-times"></i></button>
-        
-        {/* Sidebar Content Area */}
-        <div className="sidebar-content">
-          <div className="sidebar-header">
-            <h2>لوحة التحكم</h2>
-          </div>
-          <nav className="sidebar-menu">
-            <ul>
-              <li><a href="#" className={activeSection === "dashboard" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("dashboard"); setSidebarOpen(false); }}><i className="fas fa-home"></i> الرئيسية</a></li>
-              <li><a href="#" className={activeSection === "requests" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("requests"); setSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> طلباتي</a></li>
-              <li><a href="#" className={activeSection === "management" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("management"); setSidebarOpen(false); }}><i className="fas fa-tasks"></i> إدارة الطلبات</a></li>
-              <li><a href="#" className={activeSection === "profile" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("profile"); setSidebarOpen(false); }}><i className="fas fa-user"></i> الملف الشخصي</a></li>
-              <li><a href="#" className={activeSection === "help" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("help"); setSidebarOpen(false); }}><i className="fas fa-question-circle"></i> المساعدة</a></li>
-            </ul>
-          </nav>
-        </div>
-        
-        {/* Sidebar Footer - Always at bottom */}
-        <div className="sidebar-footer">
-          <a 
-            href="#" 
-            className="logout-btn" 
-            onClick={(e) => { e.preventDefault(); window.location.href = '/auth'; }}
-          >
-            <i className="fas fa-sign-out-alt"></i> تسجيل الخروج
-          </a>
-          <div className="developer-footer">
-            <span>Developed by: <a href="#" className="developer-link">Harith Riyadh</a></span>
-          </div>
-        </div>
-      </aside>
-      {sidebarOpen && <div className="sidebar-overlay visible" style={{ 	zIndex: 1001 }} onClick={() => setSidebarOpen(false)}></div>}
-      <main className="main-content" style={{ zIndex: 1 }}>
-        <header className="main-header">
-          <button className="menu-toggle-btn" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><i className="fas fa-bars"></i></button>
-          <button 
-            className="logout-btn" 
-            aria-label="تسجيل الخروج" 
-            onClick={() => window.location.href = '/auth'}
-            style={{
-              marginLeft: 'auto',
-              padding: '8px 16px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
-          >
-            <i className="fas fa-sign-out-alt" style={{ marginLeft: '8px' }}></i>
-            تسجيل الخروج
-          </button>
-        </header>
-        <section className="content-section active">
-          {renderSection()}
-        </section>
-      </main>
-      
-      {/* Full Day Request Modal */}
-      {showFullDayModal && (
-        <div className="form-overlay visible" onClick={e => { if (e.target.classList.contains('form-overlay')) setShowFullDayModal(false); }}>
-          <div className="form-container">
-            <div className="form-header">
-              <h3>تقديم طلب إجازة</h3>
-              <button className="close-form-btn" onClick={() => setShowFullDayModal(false)}><i className="fas fa-times"></i></button>
+    <div className="flex items-center justify-center p-6 bg-teal-50 rounded-3xl min-h-screen">
+        {/* Login Form Card */}
+        <div className={`w-full max-w-sm bg-white p-6 rounded-2xl shadow-xl space-y-4 ${isLogin ? '' : 'hidden'}`}>
+          <h2 className="text-2xl font-bold text-center text-teal-800">مرحبا!</h2>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
             </div>
-            
-            {submitMessage && (
-              <div className={`submit-message ${submitMessage.includes("خطأ") ? "error" : "success"}`}>
-                {submitMessage}
+          )}
+          {success && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              {success}
+            </div>
+          )}
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                اسم المستخدم
+              </label>
+              <input
+                type="text"
+                id="username"
+                value={loginData.username}
+                onChange={(e) => handleInputChange('login', 'username', e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                كلمة المرور
+              </label>
+              <input
+                type="password"
+                id="password"
+                value={loginData.password}
+                onChange={(e) => handleInputChange('login', 'password', e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-teal-600 text-white py-2 rounded-lg font-semibold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'جاري تسجيل الدخول...' : 'دخول'}
+            </button>
+          </form>
+          <p className="text-center text-sm text-gray-600">
+            ليس لديك حساب؟{' '}
+            <button
+              onClick={() => {
+                setIsLogin(false);
+                setError('');
+                setSuccess('');
+              }}
+              className="text-teal-600 font-semibold hover:underline"
+            >
+              تسجيل جديد
+            </button>
+          </p>
+        </div>
+
+        {/* Registration Form Card */}
+        <div className={`w-full max-w-lg bg-white p-8 rounded-2xl shadow-xl space-y-4 ${!isLogin ? '' : 'hidden'}`}>
+          <h2 className="text-2xl font-bold text-center text-teal-800">تسجيل جديد</h2>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              {success}
+            </div>
+          )}
+          <form onSubmit={handleRegisterSubmit}>
+            {/* Required fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reg-fullName" className="block text-sm font-medium text-gray-700 mb-1">
+                  الاسم الكامل *
+                </label>
+                <input
+                  type="text"
+                  id="reg-fullName"
+                  value={registerData.full_name}
+                  onChange={(e) => handleInputChange('register', 'full_name', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                  required
+                />
               </div>
-            )}
-            
-            <form onSubmit={handleFullDaySubmit}>
-              <div className={`form-group ${formErrors.requestType ? "error" : ""}`}>
-                <label>نوع الإجازة:</label>
-                <div className="radio-group">
-                  {/* Dynamic rendering of leave types based on gender filter */}
-                  {leaveTypes.map((type) => (
-                    <label key={type.id || type.value} className="radio-label">
-                        <input 
-                            type="radio" 
-                            name="fullDayRequestType" 
-                            value={type.value} 
-                            checked={formData.fullDay.requestType === type.value}
-                            onChange={(e) => handleFullDayChange("requestType", e.target.value)}
-                        />
-                        <span className="radio-text">{type.name}</span>
-                    </label>
+              <div>
+                <label htmlFor="reg-username" className="block text-sm font-medium text-gray-700 mb-1">
+                  اسم المستخدم *
+                </label>
+                <input
+                  type="text"
+                  id="reg-username"
+                  value={registerData.username}
+                  onChange={(e) => handleInputChange('register', 'username', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+            </div>
+            {/* The password field will be full-width as it is critical */}
+            <div className="mt-4">
+              <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-1">
+                كلمة المرور *
+              </label>
+              <input
+                type="password"
+                id="reg-password"
+                value={registerData.password}
+                onChange={(e) => handleInputChange('register', 'password', e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading}
+                required
+              />
+            </div>
+            {/* Phone and Gender in a grid */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reg-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  رقم الهاتف *
+                </label>
+                <input
+                  type="text"
+                  id="reg-phone"
+                  value={registerData.phone}
+                  onChange={(e) => handleInputChange('register', 'phone', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+              {/* NEW GENDER FIELD */}
+              <div>
+                <label htmlFor="reg-gender" className="block text-sm font-medium text-gray-700 mb-1">
+                  النوع (الجنس) *
+                </label>
+                <select
+                  id="reg-gender"
+                  value={registerData.gender}
+                  onChange={(e) => handleInputChange('register', 'gender', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                  required
+                >
+                  <option value="">اختر النوع</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </div>
+              {/* END NEW GENDER FIELD */}
+            </div>
+            {/* Specialist and College in a grid */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reg-specialist" className="block text-sm font-medium text-gray-700 mb-1">
+                  الاختصاص (اختياري)
+                </label>
+                <input
+                  type="text"
+                  id="reg-specialist"
+                  value={registerData.specialist}
+                  onChange={(e) => handleInputChange('register', 'specialist', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <label htmlFor="reg-college" className="block text-sm font-medium text-gray-700 mb-1">
+                  التوزيع
+                </label>
+                <select
+                  id="reg-college"
+                  value={registerData.college}
+                  onChange={(e) => setRegisterData(prev => ({ ...prev, college: e.target.value, department: '' }))}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                >
+                  <option value="">اختر التوزيع</option>
+                  {collegeOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
-                  {/* Fallback to original hardcoded if no types loaded (optional, but good for safety) */}
-                  {leaveTypes.length === 0 && userGender === null && (
-                    <>
-                        <label className="radio-label">
-                            <input type="radio" name="fullDayRequestType" value="daily" checked={formData.fullDay.requestType === "daily"} onChange={(e) => handleFullDayChange("requestType", e.target.value)}/>
-                            <span className="radio-text">يومية</span>
-                        </label>
-                        {/* ... other hardcoded types that are always visible ... */}
-                    </>
-                  )}
-                </div>
-                {formErrors.requestType && <div className="error-message">{formErrors.requestType}</div>}
-                {formData.fullDay.requestType === "sick" && (
-                  <div style={{ 
-                    color: '#000000', 
-                    fontSize: '14px', 
-                    marginTop: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: '#d4edda',
-                    border: '1px solid #c3e6cb',
-                    borderRadius: '4px'
-                  }}>
-                    عزيزي منتسب جامعة السراج، يرجى تزويد قسم الادارية بوثيقة تثبت حالتك المرضية في اقرب فرصة ممكنه لتجنب اعتبار الاجازة ملغية
-                  </div>
-                )}
+                </select>
               </div>
-              
-              {/* START: show study-admin message if flagged (hide date fields) */}
-              {showStudyAdminMessage && (
-                <div className="form-group">
-                    <p style={{ 
-                        padding: '10px 15px', 
-                        backgroundColor: '#fff3cd', 
-                        border: '1px solid #ffeeba',
-                        borderRadius: '5px', 
-                        fontSize: '14px',
-                        textAlign: 'center',
-                        color: '#856404'
-                    }}>
-                        <i className="fas fa-exclamation-triangle" style={{ marginLeft: '8px' }}></i>
-                        عزيزي منتسب جامعة السراج, للحصول على اجزة اكثر من 15 يوما, يجب ان تقدم طلبا بشكل مباشر الى قسم الادارية
-                    </p>
-                </div>
-              )}
-              {/* END: study-admin message */}
-
-              {/* Render date inputs only when study-admin message is not shown */}
-              {!showStudyAdminMessage && (
-                <>
-                  <div className={`form-group ${formErrors.startDate ? "error" : ""}`}>
-                    <label htmlFor="full-day-start-date">تاريخ بداية الإجازة:</label>
-                    <input 
-                      type="date" 
-                      id="full-day-start-date" 
-                      name="startDate" 
-                      value={formData.fullDay.startDate}
-                      onChange={(e) => handleFullDayDateChange("startDate", e.target.value)}
-                      onClick={handleDateInputClick}
-                      min={todayIso}
-                      required 
-                    />
-                    {formErrors.startDate && <div className="error-message">{formErrors.startDate}</div>}
-                  </div>
-                  {/* Marriage Leave Auto-Calculation Message */}
-                  {formData.fullDay.requestType === "marriage" && formData.fullDay.startDate && formData.fullDay.endDate && (
-                    <div className="form-group">
-                        <p style={{ 
-                            padding: '10px 15px', 
-                            backgroundColor: '#d4edda', 
-                            border: '1px solid #c3e6cb',
-                            borderRadius: '5px', 
-                            fontSize: '14px',
-                            textAlign: 'center',
-                            color: 'black'
-                        }}>
-                            <i className="fas fa-heart" style={{ marginLeft: '8px' }}></i>
-                            تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (زواج) ليكون 14 يوم عمل (باستثناء الخميس والجمعة).
-                        </p>
-                    </div>
-                  )}
-
-                  <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
-                    <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
-                    <input 
-                      type="date" 
-                      id="full-day-end-date" 
-                      name="endDate" 
-                      value={formData.fullDay.endDate}
-                      onChange={(e) => handleFullDayDateChange("endDate", e.target.value)}
-                      onClick={handleDateInputClick}
-                      min={formData.fullDay.startDate || todayIso}
-                      required 
-                      disabled={marriageAutoEnd}  // <-- locked when auto-calculated for marriage
-                    />
-                    {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
-                    {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}
-                  </div>
-                </>
-              )}
-              
-              {/* NEW: Vacation Summary Message */}
-              {vacationSummary && !showStudyAdminMessage && (
-                <div className="form-group">
-                    <p style={{ 
-                        padding: '10px 15px', 
-                        backgroundColor: '#e9ecef', 
-                        borderRadius: '5px', 
-                        fontSize: '14px',
-                        textAlign: 'center',
-                        color: vacationSummary.includes("لا تحتوي") || vacationSummary.includes("إجازة رسمية") ? '#dc3545' : '#007bff'
-                    }}>
-                        <i className="fas fa-info-circle" style={{ marginLeft: '8px' }}></i>
-                        {vacationSummary}
-                    </p>
-                </div>
-              )}
-              
-              
-              
-              
-              <div className="form-group">
-                <label htmlFor="full-day-request-description">ملاحظات إضافية (اختياري):</label>
-                <textarea 
-                  id="full-day-request-description" 
-                  name="requestDescription" 
-                  rows={4} 
-                  placeholder="اذكر أي تفاصيل أو أسباب إضافية للإجازة..."
-                  value={formData.fullDay.description}
-                  onChange={(e) => handleFullDayChange("description", e.target.value)}
-                />
-              </div>
-              
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary close-form-btn" 
-                  onClick={() => setShowFullDayModal(false)}
-                  disabled={isSubmitting}
+            </div>
+            {/* Department and Role in a grid */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reg-department" className="block text-sm font-medium text-gray-700 mb-1">
+                  القسم
+                </label>
+                <select
+                  id="reg-department"
+                  value={registerData.department}
+                  onChange={(e) => handleInputChange('register', 'department', e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading || departmentOptions.length === 0}
                 >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "جاري الإرسال..." : "إرسال الطلب"}
-                </button>
+                  <option value="">{departmentOptions.length ? 'اختر القسم' : 'لا توجد أقسام متاحة'}</option>
+                  {departmentOptions.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Part Time Request Modal */}
-      {showPartTimeModal && (
-        <div className="form-overlay visible" onClick={e => { if (e.target.classList.contains('form-overlay')) setShowPartTimeModal(false); }}>
-          <div className="form-container">
-            <div className="form-header">
-              <h3>تقديم طلب إجازة جزئية</h3>
-              <button className="close-form-btn" onClick={() => setShowPartTimeModal(false)}><i className="fas fa-times"></i></button>
+              <div>
+                <label htmlFor="reg-role" className="block text-sm font-medium text-gray-700 mb-1">
+                  الدور (اختياري)
+                </label>
+                <select
+                  id="reg-role"
+                  value={registerData.role}
+                  onChange={(e) => handleInputChange('register', 'role', e.target.value.toLowerCase())}
+                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={isLoading}
+                >
+                  <option value="employee">موظف</option>
+                  <option value="manager">مسؤول</option>
+                  <option value="admin">مدير</option>
+                </select>
+              </div>
             </div>
             
-            {submitMessage && (
-              <div className={`submit-message ${submitMessage.includes("خطأ") ? "error" : "success"}`}>
-                {submitMessage}
-              </div>
-            )}
-            
-            <form onSubmit={handlePartTimeSubmit}>
-              <div className={`form-group ${formErrors.date ? "error" : ""}`}>
-                <label htmlFor="part-time-date">التاريخ:</label>
-                <input 
-                  type="date" 
-                  id="part-time-date" 
-                  name="requestDate" 
-                  value={formData.partTime.date}
-                  onChange={(e) => handlePartTimeDateChange(e.target.value)}
-                  onClick={handleDateInputClick}
-                  min={todayIso}
-                  required 
-                />
-                {formErrors.date && <div className="error-message">{formErrors.date}</div>}
-              </div>
-              
-              <div className={`form-group ${formErrors.startTime ? "error" : ""}`}>
-                <label htmlFor="part-time-start-time">وقت البدء:</label>
-                <input 
-                  type="time" 
-                  id="part-time-start-time" 
-                  name="startTime" 
-                  value={formData.partTime.startTime}
-                  onChange={(e) => handlePartTimeChange("startTime", e.target.value)}
-                  required 
-                />
-                {formErrors.startTime && <div className="error-message">{formErrors.startTime}</div>}
-              </div>
-              
-              <div className={`form-group ${formErrors.endTime ? "error" : ""}`}>
-                <label htmlFor="part-time-end-time">وقت الانتهاء:</label>
-                <input 
-                  type="time" 
-                  id="part-time-end-time" 
-                  name="endTime" 
-                  value={formData.partTime.endTime}
-                  onChange={(e) => handlePartTimeChange("endTime", e.target.value)}
-                  required 
-                />
-                {formErrors.endTime && <div className="error-message">{formErrors.endTime}</div>}
-                {formErrors.timeRange && <div className="error-message">{formErrors.timeRange}</div>}
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="part-time-reason">السبب (اختياري):</label>
-                <textarea 
-                  id="part-time-reason" 
-                  name="reason" 
-                  rows={3} 
-                  placeholder="اذكر سبب الإجازة الجزئية..."
-                  value={formData.partTime.reason}
-                  onChange={(e) => handlePartTimeChange("reason", e.target.value)}
-                />
-              </div>
-              
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary close-form-btn" 
-                  onClick={() => setShowPartTimeModal(false)}
-                  disabled={isSubmitting}
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "جاري الإرسال..." : "إرسال الطلب"}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="mt-6">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-teal-600 text-white py-2 rounded-lg font-semibold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'جاري التسجيل...' : 'تسجيل'}
+              </button>
+            </div>
+          </form>
+          <p className="text-center text-sm text-gray-600">
+            لديك حساب بالفعل؟{' '}
+            <button
+              onClick={() => {
+                setIsLogin(true);
+                setError('');
+                setSuccess('');
+              }}
+              className="text-teal-600 font-semibold hover:underline"
+            >
+              دخول
+            </button>
+          </p>
         </div>
-      )}
-    </div>
+      </div>
   );
 }

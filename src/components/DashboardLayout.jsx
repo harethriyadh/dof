@@ -6,6 +6,61 @@ import Help from "../pages/Help";
 import "../dashboard.css"; // Import the CSS for the layout
 import "../Home.css"; // Import Home CSS
 
+// --- NEW UTILITY FUNCTION: Calculate motherhood leave end date (51 workdays excluding Thu/Fri)
+/**
+ * تحسب تاريخ نهاية إجازة الأمومة لمدة 51 يوماً، بدءاً من تاريخ البداية المحدد.
+ * يستثني الحساب يومي الخميس (4) والجمعة (5) من عد الأيام الـ 51.
+ * @param {string} startDateString - تاريخ البداية المحدد في صيغة "YYYY-MM-DD".
+ * @returns {{endDate: string, message: string} | null} - تاريخ النهاية المحسوب والرسالة المطلوبة.
+ */
+export const calculateMotherhoodLeaveEndDate = (startDateString) => {
+    if (!startDateString) return null;
+
+    // دالة مساعدة لتنسيق التاريخ إلى YYYY-MM-DD
+    const toISODate = (date) => {
+        const year = date.getFullYear();
+        // getMonth() هي 0-indexed (يناير=0)، لذا نضيف 1
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    // تهيئة التاريخ: نستخدم منتصف اليوم (12:00) لتجنب مشاكل المناطق الزمنية (Timezone) التي قد تغير اليوم.
+    let currentDate = new Date(startDateString);
+    currentDate.setHours(12, 0, 0, 0); 
+    
+    let workingDaysCount = 0;
+    const requiredDays = 51;
+
+    // أيام الأسبوع في JavaScript: 0=الأحد، 1=الاثنين، 2=الثلاثاء، 3=الأربعاء، 4=الخميس، 5=الجمعة، 6=السبت
+    // نستثني الخميس (4) والجمعة (5)
+
+    while (workingDaysCount < requiredDays) {
+        // التحقق من اليوم الحالي
+        const dayOfWeek = currentDate.getDay(); 
+
+        // إذا لم يكن خميس (4) ولم يكن جمعة (5)، فهو يوم عمل
+        if (dayOfWeek !== 4 && dayOfWeek !== 5) {
+            workingDaysCount++;
+        }
+        
+        // إذا لم نصل إلى اليوم الحادي والخمسين المطلوب، نتقدم إلى اليوم التالي
+        if (workingDaysCount < requiredDays) {
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        // إذا وصلنا لليوم الحادي والخمسين، يتوقف التكرار ويكون التاريخ الحالي هو تاريخ النهاية.
+    }
+
+    // التاريخ الحالي هو تاريخ نهاية الإجازة (اليوم الحادي والخمسين المحسوب)
+    const endDate = toISODate(currentDate);
+
+    // الرسالة المطلوبة
+    const message = "تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (أمومة) ليكون 51 يوماً عمل (باستثناء الخميس والجمعة).";
+
+    return { endDate, message };
+};
+// --- END NEW UTILITY FUNCTION
+
 // --- NEW UTILITY FUNCTION: Calculate marriage leave end date (14 workdays excluding Thu/Fri)
 /**
  * تحسب تاريخ نهاية إجازة الزواج لمدة 14 يوماً، بدءاً من تاريخ البداية المحدد.
@@ -61,6 +116,46 @@ export const calculateMarriageLeaveEndDate = (startDateString) => {
 };
 // --- END NEW UTILITY FUNCTION
 
+// --- NEW UTILITY FUNCTION: Calculate birth leave end date (21 workdays excluding Thu/Fri)
+/**
+ * تحسب تاريخ نهاية إجازة الولادة لمدة 21 يوماً، بدءاً من تاريخ البداية المحدد.
+ * يستثني الحساب يومي الخميس (4) والجمعة (5) من عد الأيام الـ 21.
+ * @param {string} startDateString - تاريخ البداية المحدد في صيغة "YYYY-MM-DD".
+ * @returns {{endDate: string, message: string} | null} - تاريخ النهاية المحسوب والرسالة المطلوبة.
+ */
+export const calculateBirthLeaveEndDate = (startDateString) => {
+    if (!startDateString) return null;
+
+    const toISODate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    let currentDate = new Date(startDateString);
+    currentDate.setHours(12, 0, 0, 0); 
+    
+    let workingDaysCount = 0;
+    const requiredDays = 21;
+
+    while (workingDaysCount < requiredDays) {
+        const dayOfWeek = currentDate.getDay(); 
+        if (dayOfWeek !== 4 && dayOfWeek !== 5) {
+            workingDaysCount++;
+        }
+        if (workingDaysCount < requiredDays) {
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+
+    const endDate = toISODate(currentDate);
+    const message = "تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (ولادة) ليكون 21 يوماً عمل (باستثناء الخميس والجمعة).";
+
+    return { endDate, message };
+};
+// --- END NEW UTILITY FUNCTION
+
 const sectionTitles = {
   dashboard: { title: "الرئيسية", icon: "fas fa-home" },
   requests: { title: "طلباتي", icon: "fas fa-clipboard-list" },
@@ -97,6 +192,12 @@ export default function DashboardLayout() {
   const [showStudyAdminMessage, setShowStudyAdminMessage] = useState(false);
   // NEW STATE: lock the endDate when marriage-end auto-calculated
   const [marriageAutoEnd, setMarriageAutoEnd] = useState(false);
+  // NEW STATE: lock the endDate when motherhood-end auto-calculated
+  const [motherhoodAutoEnd, setMotherhoodAutoEnd] = useState(false);
+  // NEW STATE: lock the endDate when birth-end auto-calculated
+  const [birthAutoEnd, setBirthAutoEnd] = useState(false);
+  // NEW STATE: To store the user's gender
+  const [userGender, setUserGender] = useState(null);
 
   // Utility to get today's date in yyyy-mm-dd format for the 'min' attribute
   const todayIso = new Date().toISOString().split('T')[0];
@@ -107,6 +208,38 @@ export default function DashboardLayout() {
   const [currentMonth, setCurrentMonth] = useState(1);
   const [currentYear, setCurrentYear] = useState(2025);
   
+  // NEW useEffect hook to fetch user profile and determine gender on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error("Auth token not found in local storage.");
+          return;
+        }
+
+        const response = await fetch('http://localhost:3000/api/auth/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+
+        const data = await response.json();
+        setUserGender(data.data.user.gender);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []); // Run only once on component mount
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 992) {
@@ -370,7 +503,7 @@ export default function DashboardLayout() {
 
   // Effect to update the vacation summary message whenever dates change
   useEffect(() => {
-    const { startDate, endDate } = formData.fullDay;
+    const { startDate, endDate, requestType } = formData.fullDay;
 
     // If study > 15 flagged, we clear summary (we show admin message instead)
     if (showStudyAdminMessage) {
@@ -390,14 +523,32 @@ export default function DashboardLayout() {
         const formattedStart = formatDisplayDate(startDate);
         const formattedEnd = formatDisplayDate(endDate);
 
-        if (formData.fullDay.requestType === "marriage" && startDate) {
+        if (requestType === "marriage" && startDate) {
             // For marriage leave, prefer the stable marriage message (14 workdays)
             const marriageCalculation = calculateMarriageLeaveEndDate(startDate);
             if (marriageCalculation && marriageCalculation.endDate) {
-              const formattedMarriageEnd = marriageCalculation.endDate;
+              const formattedMarriageEnd = formatDisplayDate(marriageCalculation.endDate);
               setVacationSummary(`إجازة زواج: 14 يوم عمل تبدأ من ${formattedStart} وتنتهي في ${formattedMarriageEnd}.`);
             } else {
               setVacationSummary("");
+            }
+        } else if (requestType === "motherhood" && startDate) {
+            // For motherhood leave, prefer the stable motherhood message (51 workdays)
+            const motherhoodCalculation = calculateMotherhoodLeaveEndDate(startDate);
+            if (motherhoodCalculation && motherhoodCalculation.endDate) {
+              const formattedMotherhoodEnd = formatDisplayDate(motherhoodCalculation.endDate);
+              setVacationSummary(`إجازة أمومة: 51 يوم عمل تبدأ من ${formattedStart} وتنتهي في ${formattedMotherhoodEnd}.`);
+            } else {
+              setVacationSummary("");
+            }
+        } else if (requestType === "birth" && startDate) {
+            // For birth leave, prefer the stable birth message (21 workdays)
+            const birthCalculation = calculateBirthLeaveEndDate(startDate);
+            if (birthCalculation && birthCalculation.endDate) {
+                const formattedBirthEnd = formatDisplayDate(birthCalculation.endDate);
+                setVacationSummary(`إجازة ولادة: 21 يوم عمل تبدأ من ${formattedStart} وتنتهي في ${formattedBirthEnd}.`);
+            } else {
+                setVacationSummary("");
             }
         } else {
             if (days > 0) {
@@ -487,6 +638,29 @@ export default function DashboardLayout() {
       setMarriageAutoEnd(true); // lock the end-date input
       return;
     }
+    // Special-case: if changing startDate while type=motherhood => auto-calc endDate and lock it
+    if (field === "startDate" && formData.fullDay.requestType === "motherhood") {
+      // compute motherhood end date
+      const motherhoodCalculation = calculateMotherhoodLeaveEndDate(value);
+      setFormData(prev => ({
+        ...prev,
+        fullDay: { ...prev.fullDay, startDate: value, endDate: motherhoodCalculation ? motherhoodCalculation.endDate : "" }
+      }));
+      setFormErrors(prev => ({ ...prev, [field]: "" }));
+      setMotherhoodAutoEnd(true); // lock the end-date input
+      return;
+    }
+    // Special-case: if changing startDate while type=birth => auto-calc endDate and lock it
+    if (field === "startDate" && formData.fullDay.requestType === "birth") {
+        const birthCalculation = calculateBirthLeaveEndDate(value);
+        setFormData(prev => ({
+            ...prev,
+            fullDay: { ...prev.fullDay, startDate: value, endDate: birthCalculation ? birthCalculation.endDate : "" }
+        }));
+        setFormErrors(prev => ({ ...prev, [field]: "" }));
+        setBirthAutoEnd(true);
+        return;
+    }
 
     // valid day; apply and clear any previous error on this field
     setFormData(prev => {
@@ -502,10 +676,24 @@ export default function DashboardLayout() {
           newFormData.fullDay.endDate = marriageCalculation.endDate;
           setMarriageAutoEnd(true);
         }
+      } else if (field === "startDate" && prev.fullDay.requestType === "motherhood" && value) {
+        const motherhoodCalculation = calculateMotherhoodLeaveEndDate(value);
+        if (motherhoodCalculation) {
+          newFormData.fullDay.endDate = motherhoodCalculation.endDate;
+          setMotherhoodAutoEnd(true);
+        }
+      } else if (field === "startDate" && prev.fullDay.requestType === "birth" && value) {
+        const birthCalculation = calculateBirthLeaveEndDate(value);
+        if (birthCalculation) {
+          newFormData.fullDay.endDate = birthCalculation.endDate;
+          setBirthAutoEnd(true);
+        }
       } else {
-        // if other fields are changed and requestType is not marriage, make sure the endDate lock is off
-        if (prev.fullDay.requestType !== "marriage") {
+        // if other fields are changed and requestType is not marriage, motherhood, or birth, make sure the endDate lock is off
+        if (prev.fullDay.requestType !== "marriage" && prev.fullDay.requestType !== "motherhood" && prev.fullDay.requestType !== "birth") {
           setMarriageAutoEnd(false);
+          setMotherhoodAutoEnd(false);
+          setBirthAutoEnd(false);
         }
       }
       
@@ -547,11 +735,35 @@ export default function DashboardLayout() {
     setFormErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+          throw new Error("Auth token is missing.");
+      }
+
+      const leaveData = {
+          startDate: formData.fullDay.startDate,
+          endDate: formData.fullDay.endDate,
+          requestType: formData.fullDay.requestType,
+          description: formData.fullDay.description
+      };
+
+      const response = await fetch('http://localhost:3000/api/leave-requests', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(leaveData)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+          throw new Error(result.message || 'Failed to submit request.');
+      }
       
       setSubmitMessage("تم إرسال طلب إجازة يوم كامل بنجاح!");
-      console.log('Full Day Off Request Data:', formData.fullDay);
+      console.log('Full Day Off Request Data:', leaveData);
       
       // Reset form and close modal after success
       setTimeout(() => {
@@ -562,11 +774,14 @@ export default function DashboardLayout() {
         setVacationSummary(""); // Reset summary
         setShowStudyAdminMessage(false);
         setMarriageAutoEnd(false);
+        setMotherhoodAutoEnd(false);
+        setBirthAutoEnd(false);
         setSubmitMessage("");
         setShowFullDayModal(false);
       }, 2000);
-    } catch {
-      setSubmitMessage("حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.");
+    } catch (error) {
+      setSubmitMessage(`حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى: ${error.message}`);
+      console.error("Submission error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -669,19 +884,48 @@ export default function DashboardLayout() {
           newFormData.fullDay.endDate = marriageCalculation.endDate;
           setMarriageAutoEnd(true);
         }
-      } else if (field === "requestType" && value !== "marriage") {
-        // if switching away from marriage, unlock end date
-        setMarriageAutoEnd(false);
       }
       
-      return newFormData;
-    });
-    
-    // NEW: When user selects requestType = 'study', check working-days span > 15
-    if (field === "requestType") {
-      if (value === "study") {
-        const start = formData.fullDay.startDate;
-        const end = formData.fullDay.endDate;
+      // Auto-calculate end date for motherhood leave
+      if (field === "requestType" && value === "motherhood" && prev.fullDay.startDate) {
+        const motherhoodCalculation = calculateMotherhoodLeaveEndDate(prev.fullDay.startDate);
+        if (motherhoodCalculation) {
+          newFormData.fullDay.endDate = motherhoodCalculation.endDate;
+          setMotherhoodAutoEnd(true);
+        }
+      } else if (field === "startDate" && prev.fullDay.requestType === "motherhood" && value) {
+        const motherhoodCalculation = calculateMotherhoodLeaveEndDate(value);
+        if (motherhoodCalculation) {
+          newFormData.fullDay.endDate = motherhoodCalculation.endDate;
+          setMotherhoodAutoEnd(true);
+        }
+      }
+      
+      // Auto-calculate end date for birth leave
+      if (field === "requestType" && value === "birth" && prev.fullDay.startDate) {
+          const birthCalculation = calculateBirthLeaveEndDate(prev.fullDay.startDate);
+          if (birthCalculation) {
+              newFormData.fullDay.endDate = birthCalculation.endDate;
+              setBirthAutoEnd(true);
+          }
+      } else if (field === "startDate" && prev.fullDay.requestType === "birth" && value) {
+          const birthCalculation = calculateBirthLeaveEndDate(value);
+          if (birthCalculation) {
+              newFormData.fullDay.endDate = birthCalculation.endDate;
+              setBirthAutoEnd(true);
+          }
+      } else if (field === "requestType" && value !== "marriage" && value !== "motherhood" && value !== "birth") {
+        // if switching away from marriage or motherhood, unlock end date
+        setMarriageAutoEnd(false);
+        setMotherhoodAutoEnd(false);
+        setBirthAutoEnd(false);
+      }
+      
+      // NEW: When user selects requestType = 'study', check working-days span > 15
+      const actualRequestType = field === "requestType" ? value : prev.fullDay.requestType;
+      if (actualRequestType === "study") {
+        const start = field === "startDate" ? value : prev.fullDay.startDate;
+        const end = field === "endDate" ? value : prev.fullDay.endDate;
         if (start && end) {
           const working = calculateVacationDays(start, end);
           setShowStudyAdminMessage(working > 15);
@@ -691,8 +935,10 @@ export default function DashboardLayout() {
       } else {
         setShowStudyAdminMessage(false);
       }
-    }
 
+      return newFormData;
+    });
+    
     // Clear error when user starts typing/selecting a valid option
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: "" }));
@@ -1033,26 +1279,30 @@ export default function DashboardLayout() {
                     />
                     <span className="radio-text">دراسية</span>
                   </label>
-                  <label className="radio-label">
-                    <input 
-                      type="radio" 
-                      name="fullDayRequestType" 
-                      value="motherhood" 
-                      checked={formData.fullDay.requestType === "motherhood"}
-                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
-                    />
-                    <span className="radio-text">إجازة أمومة</span>
-                  </label>
-                  <label className="radio-label">
-                    <input 
-                      type="radio" 
-                      name="fullDayRequestType" 
-                      value="birth" 
-                      checked={formData.fullDay.requestType === "birth"}
-                      onChange={(e) => handleFullDayChange("requestType", e.target.value)}
-                    />
-                    <span className="radio-text">ولادة</span>
-                  </label>
+                  {userGender === "female" && (
+                      <label className="radio-label">
+                          <input 
+                              type="radio" 
+                              name="fullDayRequestType" 
+                              value="motherhood" 
+                              checked={formData.fullDay.requestType === "motherhood"}
+                              onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                          />
+                          <span className="radio-text">إجازة أمومة</span>
+                      </label>
+                  )}
+                  {userGender === "female" && (
+                      <label className="radio-label">
+                          <input 
+                              type="radio" 
+                              name="fullDayRequestType" 
+                              value="birth" 
+                              checked={formData.fullDay.requestType === "birth"}
+                              onChange={(e) => handleFullDayChange("requestType", e.target.value)}
+                          />
+                          <span className="radio-text">ولادة</span>
+                      </label>
+                  )}
                 </div>
                 {formErrors.requestType && <div className="error-message">{formErrors.requestType}</div>}
                 {formData.fullDay.requestType === "sick" && (
@@ -1123,6 +1373,40 @@ export default function DashboardLayout() {
                         </p>
                     </div>
                   )}
+                  {/* Motherhood Leave Auto-Calculation Message */}
+                  {formData.fullDay.requestType === "motherhood" && formData.fullDay.startDate && formData.fullDay.endDate && (
+                    <div className="form-group">
+                        <p style={{ 
+                            padding: '10px 15px', 
+                            backgroundColor: '#d4edda', 
+                            border: '1px solid #c3e6cb',
+                            borderRadius: '5px', 
+                            fontSize: '14px',
+                            textAlign: 'center',
+                            color: 'black'
+                        }}>
+                            <i className="fas fa-baby" style={{ marginLeft: '8px' }}></i>
+                            تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (أمومة) ليكون 51 يوم عمل (باستثناء الخميس والجمعة).
+                        </p>
+                    </div>
+                  )}
+                  {/* Birth Leave Auto-Calculation Message */}
+                  {formData.fullDay.requestType === "birth" && formData.fullDay.startDate && formData.fullDay.endDate && (
+                    <div className="form-group">
+                        <p style={{ 
+                            padding: '10px 15px', 
+                            backgroundColor: '#d4edda', 
+                            border: '1px solid #c3e6cb',
+                            borderRadius: '5px', 
+                            fontSize: '14px',
+                            textAlign: 'center',
+                            color: 'black'
+                        }}>
+                            <i className="fas fa-baby-carriage" style={{ marginLeft: '8px' }}></i>
+                            تم حساب تاريخ نهاية الإجازة تلقائياً بناءً على نوع الإجازة (ولادة) ليكون 21 يوم عمل (باستثناء الخميس والجمعة).
+                        </p>
+                    </div>
+                  )}
 
                   <div className={`form-group ${formErrors.endDate ? "error" : ""}`}>
                     <label htmlFor="full-day-end-date">تاريخ نهاية الإجازة:</label>
@@ -1135,7 +1419,7 @@ export default function DashboardLayout() {
                       onClick={handleDateInputClick}
                       min={formData.fullDay.startDate || todayIso}
                       required 
-                      disabled={marriageAutoEnd}  // <-- locked when auto-calculated for marriage
+                      disabled={marriageAutoEnd || motherhoodAutoEnd || birthAutoEnd}  // <-- locked when auto-calculated for marriage, motherhood, or birth
                     />
                     {formErrors.endDate && <div className="error-message">{formErrors.endDate}</div>}
                     {formErrors.dateRange && <div className="error-message">{formErrors.dateRange}</div>}

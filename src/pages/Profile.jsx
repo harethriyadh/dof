@@ -58,15 +58,34 @@ export default function Profile() {
     fetchProfile();
   }, [navigate]);
 
+  // Helper function to translate role to Arabic
+  const translateRole = (role) => {
+    if (!role) return '';
+    const roleLower = role.toLowerCase();
+    switch (roleLower) {
+      case 'admin':
+      case 'super admin':
+        return 'مدير';
+      case 'manager':
+        return 'مسؤول';
+      case 'employee':
+        return 'موظف';
+      case 'head of department':
+        return 'رئيس قسم';
+      default:
+        return role; // Return original if no translation found
+    }
+  };
+
   const profileDetails = useMemo(() => {
     if (!userData) return [];
     
     const details = [
-      { label: "الجنس", value: userData.gender === 'male' ? 'ذكر' : userData.gender === 'female' ? 'أنثى' : userData.gender, icon: "fas fa-venus-mars" },
+      { label: "الدور والقسم", value: `${translateRole(userData.role)} - ${userData.department || userData.departmentName || ''}`, icon: "fas fa-user-tag" },
       { label: "الهاتف", value: userData.phone || userData.phoneNumber, icon: "fas fa-phone" },
-      { label: "القسم", value: userData.department || userData.departmentName, icon: "fas fa-building" },
       { label: "الاختصاص", value: userData.specialist || userData.specialization, icon: "fas fa-user-md" },
-      { label: "الكلية", value: userData.college || userData.collegeName, icon: "fas fa-university" }
+      { label: "الموقع", value: userData.college || userData.collegeName, icon: "fas fa-university" },
+      { label: "الجنس", value: userData.gender === 'male' ? 'ذكر' : userData.gender === 'female' ? 'أنثى' : userData.gender, icon: "fas fa-venus-mars" }
     ].filter(detail => detail.value != null && detail.value !== '');
 
     return details;

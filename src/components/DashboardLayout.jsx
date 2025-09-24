@@ -196,8 +196,113 @@ export default function DashboardLayout() {
   const [motherhoodAutoEnd, setMotherhoodAutoEnd] = useState(false);
   // NEW STATE: lock the endDate when birth-end auto-calculated
   const [birthAutoEnd, setBirthAutoEnd] = useState(false);
-  // NEW STATE: To store the user's gender
-  const [userGender, setUserGender] = useState(null);
+  // NEW STATE: To store the user's gender, full name, and department
+  const [userData, setUserData] = useState(null);
+  
+  // NEW STATE: To store user's leave balance data
+  const [userLeaveData, setUserLeaveData] = useState({
+    availableDays: 0,
+    availableHours: 0,
+    totalDays: 0,
+    totalHours: 0,
+    usedDays: 0,
+    usedHours: 0
+  });
+  const [leaveDataLoading, setLeaveDataLoading] = useState(false);
+
+  // Helper function to check if user has management access (admin or manager)
+  const hasManagementAccess = () => {
+    if (!userData || !userData.role) return false;
+    return userData.role.toLowerCase() === 'admin' || 
+           userData.role.toLowerCase() === 'manager' ||
+           userData.role.toLowerCase() === 'super admin';
+  };
+
+  // Function to fetch user-specific leave requests and calculate balance
+  const fetchUserLeaveData = async () => {
+    if (!userData?.id) return;
+    
+    setLeaveDataLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error("Auth token not found");
+        return;
+      }
+
+      // Fetch user's leave requests
+      const response = await fetch("http://localhost:3000/api/leave-requests", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch leave requests');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        const userRequests = result.data.filter(req => 
+          req.user_id === userData.id || 
+          req.employee_name === userData.full_name ||
+          req.employee_name === userData.username
+        );
+
+        // Calculate leave balance
+        const totalDaysPerYear = 30; // Assuming 30 days per year
+        const totalHoursPerYear = 240; // Assuming 8 hours per day * 30 days
+
+        // Calculate used days and hours from approved requests
+        const usedDays = userRequests
+          .filter(req => req.status === 'approved')
+          .reduce((total, req) => total + (parseInt(req.number_of_days) || 0), 0);
+
+        const usedHours = userRequests
+          .filter(req => req.status === 'approved')
+          .reduce((total, req) => {
+            const days = parseInt(req.number_of_days) || 0;
+            return total + (days * 8); // Assuming 8 hours per day
+          }, 0);
+
+        const availableDays = Math.max(0, totalDaysPerYear - usedDays);
+        const availableHours = Math.max(0, totalHoursPerYear - usedHours);
+
+        setUserLeaveData({
+          availableDays,
+          availableHours,
+          totalDays: totalDaysPerYear,
+          totalHours: totalHoursPerYear,
+          usedDays,
+          usedHours
+        });
+
+        console.log('User leave data calculated:', {
+          totalDays: totalDaysPerYear,
+          usedDays,
+          availableDays,
+          totalHours: totalHoursPerYear,
+          usedHours,
+          availableHours
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user leave data:", error);
+      // Set default values on error
+      setUserLeaveData({
+        availableDays: 20,
+        availableHours: 160,
+        totalDays: 30,
+        totalHours: 240,
+        usedDays: 10,
+        usedHours: 80
+      });
+    } finally {
+      setLeaveDataLoading(false);
+    }
+  };
 
   // Utility to get today's date in yyyy-mm-dd format for the 'min' attribute
   const todayIso = new Date().toISOString().split('T')[0];
@@ -231,7 +336,7 @@ export default function DashboardLayout() {
         }
 
         const data = await response.json();
-        setUserGender(data.data.user.gender);
+        setUserData(data?.data?.user);
       } catch (error) {
         console.error("Error fetching user profile:", error);
       }
@@ -239,6 +344,13 @@ export default function DashboardLayout() {
     
     fetchUserProfile();
   }, []); // Run only once on component mount
+
+  // Fetch user leave data when userData is available
+  useEffect(() => {
+    if (userData?.id) {
+      fetchUserLeaveData();
+    }
+  }, [userData?.id]); // Run when userData.id changes
 
   useEffect(() => {
     const handleResize = () => {
@@ -443,11 +555,11 @@ export default function DashboardLayout() {
     return messages[lastRequestStatus] || messages.pending;
   }, [lastRequestStatus]);
 
-  // Memoized leave balance data
+  // Memoized leave balance data - now using real user data
   const leaveBalance = useMemo(() => ({
-    availableDays: 20,
-    availableHours: 160
-  }), []);
+    availableDays: userLeaveData.availableDays,
+    availableHours: userLeaveData.availableHours
+  }), [userLeaveData.availableDays, userLeaveData.availableHours]);
 
   // Utility: check if a yyyy-mm-dd string falls on Thursday (4) or Friday (5)
   const isThursdayOrFriday = (isoDateString) => {
@@ -739,12 +851,28 @@ export default function DashboardLayout() {
       if (!token) {
           throw new Error("Auth token is missing.");
       }
+      
+      const { startDate, endDate, requestType, description } = formData.fullDay;
+
+      // Map leave types to the required backend schema
+      const leaveTypeMapping = {
+          "daily": "اعتيادية",
+          "sick": "مرضية",
+          "hajj": "حج او عمرة",
+          "marriage": "زواج",
+          "study": "دراسية",
+          "motherhood": "أمومة",
+          "birth": "ولادة"
+      };
 
       const leaveData = {
-          startDate: formData.fullDay.startDate,
-          endDate: formData.fullDay.endDate,
-          requestType: formData.fullDay.requestType,
-          description: formData.fullDay.description
+          user_id: userData?.id,
+          employee_name: userData?.full_name || userData?.username,
+          department: userData?.department || userData?.departmentName,
+          leave_type: leaveTypeMapping[requestType],
+          start_date: startDate,
+          end_date: endDate,
+          reason: description || ""
       };
 
       const response = await fetch('http://localhost:3000/api/leave-requests', {
@@ -1005,13 +1133,21 @@ export default function DashboardLayout() {
                 </div>
                 <div className="summary-section">
                   <div className="summary-main-value summary-main-value-green">
-                    {leaveBalance.availableDays}
+                    {leaveDataLoading ? (
+                      <i className="fas fa-spinner fa-spin"></i>
+                    ) : (
+                      leaveBalance.availableDays
+                    )}
                   </div>
                   <div className="summary-label">أيام الإجازة</div>
                 </div>
                 <div className="summary-section no-border">
                   <div className="summary-main-value summary-main-value-orange">
-                    {leaveBalance.availableHours}
+                    {leaveDataLoading ? (
+                      <i className="fas fa-spinner fa-spin"></i>
+                    ) : (
+                      leaveBalance.availableHours
+                    )}
                   </div>
                   <div className="summary-label">ساعات الإجازة</div>
                 </div>
@@ -1135,6 +1271,26 @@ export default function DashboardLayout() {
       case "requests":
         return <AllRequests />;
       case "management":
+        // Check if user has management access
+        if (!hasManagementAccess()) {
+          return (
+            <div className="unauthorized-access">
+              <div className="unauthorized-content">
+                <i className="fas fa-lock"></i>
+                <h2>غير مسموح بالوصول</h2>
+                <p>عذراً، ليس لديك صلاحية للوصول إلى صفحة إدارة الطلبات.</p>
+                <p>هذه الصفحة متاحة فقط للمديرين والمسؤولين.</p>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => setActiveSection("dashboard")}
+                >
+                  <i className="fas fa-home"></i>
+                  العودة إلى الرئيسية
+                </button>
+              </div>
+            </div>
+          );
+        }
         return <RequestsManagement />;
       case "profile":
         return <Profile />;
@@ -1159,7 +1315,10 @@ export default function DashboardLayout() {
             <ul>
               <li><a href="#" className={activeSection === "dashboard" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("dashboard"); setSidebarOpen(false); }}><i className="fas fa-home"></i> الرئيسية</a></li>
               <li><a href="#" className={activeSection === "requests" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("requests"); setSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> طلباتي</a></li>
-              <li><a href="#" className={activeSection === "management" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("management"); setSidebarOpen(false); }}><i className="fas fa-tasks"></i> إدارة الطلبات</a></li>
+              {/* Only show management menu item for admin and manager roles */}
+              {hasManagementAccess() && (
+                <li><a href="#" className={activeSection === "management" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("management"); setSidebarOpen(false); }}><i className="fas fa-tasks"></i> إدارة الطلبات</a></li>
+              )}
               <li><a href="#" className={activeSection === "profile" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("profile"); setSidebarOpen(false); }}><i className="fas fa-user"></i> الملف الشخصي</a></li>
               <li><a href="#" className={activeSection === "help" ? "active" : ""} onClick={e => { e.preventDefault(); setActiveSection("help"); setSidebarOpen(false); }}><i className="fas fa-question-circle"></i> المساعدة</a></li>
             </ul>
@@ -1279,7 +1438,7 @@ export default function DashboardLayout() {
                     />
                     <span className="radio-text">دراسية</span>
                   </label>
-                  {userGender === "female" && (
+                  {userData?.gender === "female" && (
                       <label className="radio-label">
                           <input 
                               type="radio" 
@@ -1291,7 +1450,7 @@ export default function DashboardLayout() {
                           <span className="radio-text">إجازة أمومة</span>
                       </label>
                   )}
-                  {userGender === "female" && (
+                  {userData?.gender === "female" && (
                       <label className="radio-label">
                           <input 
                               type="radio" 

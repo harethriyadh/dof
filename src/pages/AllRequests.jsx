@@ -21,6 +21,36 @@ export default function MyQuests() {
         return;
       }
 
+      // Decode JWT to extract current user info
+      const decodeJwt = (tkn) => {
+        try {
+          const payload = tkn.split('.')[1];
+          const base = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const json = decodeURIComponent(
+            atob(base)
+              .split('')
+              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          return JSON.parse(json);
+        } catch {
+          return {};
+        }
+      };
+
+      const userClaims = decodeJwt(token);
+      const cachedUserStr = localStorage.getItem('authUser');
+      const cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : {};
+
+      // Normalize helper
+      const norm = (v) => (v == null ? null : String(v).trim().toLowerCase());
+
+      // Collect possible identifiers from both sources (claims + cached user)
+      const currentUserId = userClaims.user_id || userClaims.id || userClaims.sub || cachedUser.id || cachedUser.user_id || null;
+      const currentEmployeeId = userClaims.employee_id || cachedUser.employee_id || cachedUser.employeeId || null;
+      const currentEmployeeName = userClaims.employee_name || userClaims.name || userClaims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
+      const currentEmail = userClaims.email || userClaims.employee_email || cachedUser.email || cachedUser.employee_email || null;
+
       const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -40,11 +70,17 @@ export default function MyQuests() {
       const result = await response.json();
       
       if (result.success) {
-        // Filter requests for the current user
-        const userRequests = result.data.filter(req => 
-          req.user_id || req.employee_name // Keep all requests for now, filtering will be done by backend
-        );
-        setRequests(userRequests);
+        const allRequests = Array.isArray(result.data) ? result.data : [];
+        // Filter requests to only those belonging to the logged-in user
+        const myRequests = allRequests.filter((req) => {
+          const matchesUserId = (req.user_id != null && currentUserId != null && String(req.user_id) === String(currentUserId))
+            || (req.employee_id != null && currentEmployeeId != null && String(req.employee_id) === String(currentEmployeeId));
+          const matchesName = norm(req.employee_name) && norm(currentEmployeeName) && norm(req.employee_name) === norm(currentEmployeeName);
+          const matchesEmail = (norm(req.email) && norm(currentEmail) && norm(req.email) === norm(currentEmail))
+            || (norm(req.employee_email) && norm(currentEmail) && norm(req.employee_email) === norm(currentEmail));
+          return matchesUserId || matchesName || matchesEmail;
+        });
+        setRequests(myRequests);
       } else {
         setError(result.message || "Failed to fetch requests.");
       }
@@ -245,45 +281,37 @@ export default function MyQuests() {
           <table className="requests-table" id="requests-table">
             <thead>
               <tr>
-                <th>تاريخ الطلب</th>
-                <th>وصف الطلب</th>
+                <th>نوع الإجازة</th>
+                <th>من تاريخ</th>
+                <th>إلى تاريخ</th>
+                <th>عدد الأيام</th>
+                <th>عدد الأيام</th>
                 <th>الحالة</th>
-                <th>الإجراءات</th>
+                <th>تاريخ المعالجة</th>
+                <th>تمت المعالجة بواسطة</th>
+                <th>سبب الرفض</th>
               </tr>
             </thead>
             <tbody>
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.date}</td>
-                    <td>{r.desc}</td>
-                    <td><span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span></td>
-                    <td className="actions-cell">
-                      <button 
-                        className="options-button" 
-                        aria-label="خيارات الطلب"
-                      >
-                        <i className="fas fa-ellipsis-h"></i>
-                      </button>
-                      {/* The options menu logic is not provided, so these buttons will be standalone */}
-                      <button 
-                        className="btn-action edit-request-btn"
-                        onClick={() => handleEditRequest(r.id)}
-                      >
-                        <i className="fas fa-edit"></i> تعديل
-                      </button>
-                      <button
-                        className="btn-action delete-request-btn"
-                        onClick={() => handleDeleteRequest(r.id)}
-                      >
-                        <i className="fas fa-trash-alt"></i> حذف
-                      </button>
+                  <tr key={r.request_no || r.id}>
+                    <td>{r.leave_type || '-'}</td>
+                    <td>{(r.start_date && String(r.start_date).includes('T')) ? r.start_date.split('T')[0] : (r.start_date || '-')}</td>
+                    <td>{(r.end_date && String(r.end_date).includes('T')) ? r.end_date.split('T')[0] : (r.end_date || '-')}</td>
+                    <td>{r.number_of_days != null ? r.number_of_days : '-'}</td>
+                    <td>{r.number_of_days != null ? r.number_of_days : '-'}</td>
+                    <td>
+                      <span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span>
                     </td>
+                    <td>{(r.processing_date && String(r.processing_date).includes('T')) ? r.processing_date.split('T')[0] : (r.processing_date || '-')}</td>
+                    <td>{r.processed_by || '-'}</td>
+                    <td>{r.reason_for_rejection || '-'}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="no-requests-found">لا توجد طلبات لعرضها.</td>
+                  <td colSpan="9" className="no-requests-found">لا توجد طلبات لعرضها.</td>
                 </tr>
               )}
             </tbody>

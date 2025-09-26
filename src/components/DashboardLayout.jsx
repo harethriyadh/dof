@@ -520,40 +520,152 @@ export default function DashboardLayout() {
     return `${day} ${month} ${year}`;
   };
 
-  // Mock data - in a real app, this would come from props or context
-  const lastRequestStatus = "approved";
+  // Last processed (approved/rejected) request for current user shown for 4 days
+  const [lastProcessedRequest, setLastProcessedRequest] = useState(null);
 
-  // Memoized status class calculation
-  const statusClass = useMemo(() => {
-    switch (lastRequestStatus) {
-      case "rejected":
-        return "status-rejected";
-      case "pending":
-      default:
-        return "status-approved";
+  // Helpers to identify current user from token or cached user
+  const decodeJwt = (tkn) => {
+    try {
+      const payload = tkn.split('.')[1];
+      const base = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(json);
+    } catch {
+      return {};
     }
-  }, [lastRequestStatus]);
+  };
 
-  // Memoized status message generation
-  const statusMessage = useMemo(() => {
-    const isOneDay = true; // Placeholder: true for one-day leave, false for a range.
-    const startDate = "9/4";
-    const endDate = "9/7";
+  const normalize = (v) => (v == null ? null : String(v).trim().toLowerCase());
 
-    const messages = {
-      approved: isOneDay
-        ? `تم قبول اجازتك ليوم ${startDate}`
-        : `تم قبول اجازتك من يوم ${startDate} إلى يوم ${endDate}`,
-      rejected: isOneDay
-        ? `تم رفض اجازتك ليوم ${startDate}`
-        : `تم رفض اجازتك من يوم ${startDate} إلى يوم ${endDate}`,
-      pending: isOneDay
-        ? `اجازتك ليوم ${startDate} قيد المراجعة`
-        : `اجازتك من يوم ${startDate} إلى يوم ${endDate} قيد المراجعة`
+  useEffect(() => {
+    const fetchLastProcessed = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        const claims = decodeJwt(token);
+        const cachedUserStr = localStorage.getItem('authUser');
+        const cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : {};
+
+        const currentUserId = claims.user_id || claims.id || claims.sub || cachedUser.id || cachedUser.user_id || null;
+        const currentEmployeeId = claims.employee_id || cachedUser.employee_id || cachedUser.employeeId || null;
+        const currentEmployeeName = claims.employee_name || claims.name || claims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
+        const currentEmail = claims.email || claims.employee_email || cachedUser.email || cachedUser.employee_email || null;
+
+        const res = await fetch("http://localhost:3000/api/leave-requests", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const json = await res.json();
+        if (!json?.success) return;
+
+        const all = Array.isArray(json.data) ? json.data : [];
+        const mine = all.filter((req) => {
+          const matchesUserId = (req.user_id != null && currentUserId != null && String(req.user_id) === String(currentUserId))
+            || (req.employee_id != null && currentEmployeeId != null && String(req.employee_id) === String(currentEmployeeId));
+          const matchesName = normalize(req.employee_name) && normalize(currentEmployeeName) && normalize(req.employee_name) === normalize(currentEmployeeName);
+          const matchesEmail = (normalize(req.email) && normalize(currentEmail) && normalize(req.email) === normalize(currentEmail))
+            || (normalize(req.employee_email) && normalize(currentEmail) && normalize(req.employee_email) === normalize(currentEmail));
+          return matchesUserId || matchesName || matchesEmail;
+        });
+
+        const processed = mine.filter(r => r.status === 'approved' || r.status === 'rejected');
+
+        // Sort by processing_date desc (fallback to updated_at or request_date)
+        processed.sort((a, b) => {
+          const aDate = new Date((a.processing_date || a.updated_at || a.request_date || '').toString());
+          const bDate = new Date((b.processing_date || b.updated_at || b.request_date || '').toString());
+          return bDate - aDate;
+        });
+
+        const latest = processed[0];
+        if (!latest) {
+          setLastProcessedRequest(null);
+          return;
+        }
+
+        // Only show for 4 days after processing
+        const procStr = latest.processing_date || latest.updated_at || latest.request_date;
+        if (!procStr) {
+          setLastProcessedRequest(null);
+          return;
+        }
+        const processedAt = new Date(procStr.toString());
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - processedAt.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays > 4) {
+          setLastProcessedRequest(null);
+          return;
+        }
+
+        setLastProcessedRequest(latest);
+      } catch (e) {
+        console.warn('Failed to fetch last processed request:', e);
+        setLastProcessedRequest(null);
+      }
     };
 
-    return messages[lastRequestStatus] || messages.pending;
-  }, [lastRequestStatus]);
+    fetchLastProcessed();
+  }, []);
+
+  // Status class for last processed card
+  const statusClass = useMemo(() => {
+    if (!lastProcessedRequest) return '';
+    switch (lastProcessedRequest.status) {
+      case 'rejected':
+        return 'status-rejected';
+      case 'approved':
+      default:
+        return 'status-approved';
+    }
+  }, [lastProcessedRequest]);
+
+  // Arabic day names helper
+  const getArabicDayName = (isoDate) => {
+    if (!isoDate) return '';
+    const d = new Date(isoDate.toString().replace(/-/g, '/'));
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    return days[d.getDay()] || '';
+  };
+
+  const formatIsoToArabic = (iso) => {
+    if (!iso) return '';
+    const [year, month, day] = iso.toString().split('T')[0].split('-');
+    return `${parseInt(day)}/${parseInt(month)}/${year}`;
+  };
+
+  // Build message with dates, day names, and number_of_days
+  const statusMessage = useMemo(() => {
+    if (!lastProcessedRequest) return '';
+    const r = lastProcessedRequest;
+    const start = (r.start_date || '').toString();
+    const end = (r.end_date || '').toString();
+    const numDays = r.number_of_days != null ? r.number_of_days : '';
+    const isOneDay = start && end && start.split('T')[0] === end.split('T')[0];
+    const startDayName = getArabicDayName(start);
+    const endDayName = getArabicDayName(end);
+    const startDisp = `${startDayName} ${formatIsoToArabic(start)}`;
+    const endDisp = `${endDayName} ${formatIsoToArabic(end)}`;
+
+    if (r.status === 'approved') {
+      return isOneDay
+        ? `تم قبول إجازتك ليوم ${startDisp} (عدد الأيام: ${numDays})`
+        : `تم قبول إجازتك من يوم ${startDisp} إلى يوم ${endDisp} (عدد الأيام: ${numDays})`;
+    }
+    if (r.status === 'rejected') {
+      const reason = r.reason_for_rejection ? `، سبب الرفض: ${r.reason_for_rejection}` : '';
+      return isOneDay
+        ? `تم رفض إجازتك ليوم ${startDisp} (عدد الأيام: ${numDays})${reason}`
+        : `تم رفض إجازتك من يوم ${startDisp} إلى يوم ${endDisp} (عدد الأيام: ${numDays})${reason}`;
+    }
+    return '';
+  }, [lastProcessedRequest]);
 
   // Memoized leave balance data - now using real user data
   const leaveBalance = useMemo(() => ({

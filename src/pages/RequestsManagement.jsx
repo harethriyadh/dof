@@ -91,8 +91,28 @@ export default function RequestsManagement() {
         console.log('Applied filter:', result.meta.filter);
 
         // Separate requests into pending and processed
-        const pending = allRequests.filter((req) => req.status === "pending");
-        const processed = allRequests.filter((req) => req.status !== "pending");
+        let pending = allRequests.filter((req) => req.status === "pending");
+        let processed = allRequests.filter((req) => req.status !== "pending");
+
+        // If current user is a manager, limit pending to their department only
+        try {
+          const authUserStr = localStorage.getItem('authUser');
+          const authUser = authUserStr ? JSON.parse(authUserStr) : null;
+          const role = authUser?.role?.toLowerCase?.();
+          const userDept = (authUser?.department || authUser?.departmentName || '').toString().trim().toLowerCase();
+          if (role === 'manager' && userDept) {
+            pending = pending.filter((req) => {
+              const reqDept = (req.department || '').toString().trim().toLowerCase();
+              return reqDept === userDept;
+            });
+            processed = processed.filter((req) => {
+              const reqDept = (req.department || '').toString().trim().toLowerCase();
+              return reqDept === userDept;
+            });
+          }
+        } catch (e) {
+          console.warn('Could not apply department filter for manager:', e);
+        }
 
         setPendingRequests(pending);
         setProcessedRequests(processed);

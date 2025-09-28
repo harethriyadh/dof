@@ -605,6 +605,23 @@ export default function DashboardLayout() {
         }
 
         setLastProcessedRequest(latest);
+        // Debug: Log the latest processed request to understand the data structure
+        console.log('Latest processed request:', latest);
+        console.log('Rejection reason fields:', {
+          reason_for_rejection: latest.reason_for_rejection,
+          rejection_reason: latest.rejection_reason,
+          reason: latest.reason,
+          rejection_note: latest.rejection_note
+        });
+        console.log('Processor fields:', {
+          processed_by: latest.processed_by,
+          approved_by: latest.approved_by,
+          rejected_by: latest.rejected_by,
+          processed_by_name: latest.processed_by_name,
+          approver_name: latest.approver_name,
+          rejector_name: latest.rejector_name,
+          manager_name: latest.manager_name
+        });
       } catch (e) {
         console.warn('Failed to fetch last processed request:', e);
         setLastProcessedRequest(null);
@@ -1228,13 +1245,84 @@ export default function DashboardLayout() {
             </div>
             <div className="cards-section">
               {/* The Last Request Status Card: */}
-              <div className={`card status-last-request card-hover ${statusClass}`}>
-                <div className="card-content">
-                  <span className="request-status-message">
-                    {statusMessage}
-                  </span>
+              {lastProcessedRequest && (
+                <div className={`card ${lastProcessedRequest.status === 'approved' ? 'last-request-card-five-col' : 'last-request-card-six-col'} card-hover ${lastProcessedRequest.status === 'approved' ? 'approved' : 'rejected'}`}>
+                  <div className="summary-section">
+                    <div className="summary-main-value">
+                      {lastProcessedRequest.status === 'approved' ? 'تم قبول' : 'تم رفض'}<br />
+                      {lastProcessedRequest.status === 'approved' ? 'إجازتك' : 'طلبــــــــــك'}
+                    </div>
+                  </div>
+                  <div className="summary-section">
+                    <div className={`summary-main-value ${lastProcessedRequest.status === 'approved' ? 'summary-main-value-green' : 'summary-main-value-red'}`}>
+                      {lastProcessedRequest.number_of_days || 0}
+                    </div>
+                    <div className="summary-label">
+                      {lastProcessedRequest.status === 'approved' ? 'أيام معتمدة' : 'أيام مرفوضة'}
+                    </div>
+                  </div>
+                  {lastProcessedRequest.status === 'rejected' && (
+                    <div className="summary-section">
+                      <div className="summary-main-value summary-main-value-blue">
+                        {lastProcessedRequest.reason_for_rejection || 
+                         lastProcessedRequest.rejection_reason || 
+                         lastProcessedRequest.reason || 
+                         lastProcessedRequest.rejection_note ||
+                         'لا يوجد سبب محدد'}
+                      </div>
+                      <div className="summary-label">سبب الرفض</div>
+                    </div>
+                  )}
+                  <div className="summary-section">
+                    <div className="summary-main-value">
+                      {lastProcessedRequest.start_date ? 
+                        formatIsoToArabic(lastProcessedRequest.start_date) : 
+                        '-'
+                      }
+                    </div>
+                    <div className="summary-label">تاريخ البداية</div>
+                  </div>
+                  <div className="summary-section">
+                    <div className="summary-main-value summary-main-value-orange">
+                      {lastProcessedRequest.end_date ? 
+                        formatIsoToArabic(lastProcessedRequest.end_date) : 
+                        '-'
+                      }
+                    </div>
+                    <div className="summary-label">تاريخ النهاية</div>
+                  </div>
+                  <div className="summary-section no-border">
+                    <div className="summary-main-value summary-main-value-purple" dir="rtl">
+                      {(() => {
+                        const processor = lastProcessedRequest.processed_by || 
+                                        lastProcessedRequest.approved_by || 
+                                        lastProcessedRequest.rejected_by ||
+                                        lastProcessedRequest.processed_by_name ||
+                                        lastProcessedRequest.approver_name ||
+                                        lastProcessedRequest.rejector_name ||
+                                        lastProcessedRequest.manager_name;
+                        
+                        if (!processor) return 'غير محدد';
+                        
+                        // If it's the old hardcoded value, show a generic message
+                        if (processor === 'المدير الحالي') {
+                          return 'المدير';
+                        }
+                        
+                        // If it contains the detailed format, extract just the name and role
+                        if (processor.includes(' - ')) {
+                          return processor.split(' - ')[0] + ' - ' + processor.split(' - ')[1];
+                        }
+                        
+                        return processor;
+                      })()}
+                    </div>
+                    <div className="summary-label">
+                      {lastProcessedRequest.status === 'approved' ? 'تمت الموافقة بواسطة' : 'تم الرفض بواسطة'}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Leave Balance Card */}
               <div className="card leave-balance-card-three-col card-hover">

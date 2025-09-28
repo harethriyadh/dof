@@ -14,18 +14,19 @@ export default function AuthPage() {
     password: ''
   });
 
-  // Register form state - ADDED 'gender', 'administrative_position', and 'degree' HERE
+  // Register form state - Updated to match schema
   const [registerData, setRegisterData] = useState({
     full_name: '',
     username: '',
     password: '',
     phone: '',
-    gender: '', // New field added
-    administrative_position: '', // New field added
-    degree: '', // New field added
     college: '',
     department: '',
-    role: 'employee'
+    administrative_position: '',
+    degree: '', // Highest educational qualification
+    gender: '', // "male" or "female"
+    role: 'employee',
+    leave_balances: [] // Array of leave balance objects
   });
 
   const navigate = useNavigate();
@@ -128,6 +129,8 @@ export default function AuthPage() {
       errors.push({ field: 'role', message: 'الدور غير صالح' });
     }
 
+    // Leave balances validation - COMMENTED OUT FOR NOW
+    /*
     if (Array.isArray(payload.leave_balances)) {
       payload.leave_balances.forEach((item, idx) => {
         if (!item) return;
@@ -137,8 +140,12 @@ export default function AuthPage() {
         if (item.available_days == null || Number(item.available_days) < 0) {
           errors.push({ field: `leave_balances[${idx}].available_days`, message: 'الأيام المتاحة يجب أن تكون 0 أو أكثر' });
         }
+        if (typeof item.one_time_used !== 'boolean') {
+          errors.push({ field: `leave_balances[${idx}].one_time_used`, message: 'حقل الاستخدام لمرة واحدة يجب أن يكون true أو false' });
+        }
       });
     }
+    */
 
     return { valid: errors.length === 0, errors };
   };
@@ -216,9 +223,13 @@ export default function AuthPage() {
       username: registerData.username,
       password: registerData.password,
       phone: registerData.phone,
-      gender: registerData.gender, // Make sure the new required field is here
-      administrative_position: registerData.administrative_position, // Include administrative position
-      degree: registerData.degree // Include degree
+      college: registerData.college,
+      department: registerData.department,
+      administrative_position: registerData.administrative_position,
+      degree: registerData.degree,
+      gender: registerData.gender,
+      role: registerData.role,
+      leave_balances: registerData.leave_balances
     };
 
 
@@ -459,7 +470,7 @@ export default function AuthPage() {
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="reg-degree" className="block text-sm font-medium text-gray-700 mb-1">
-                  Degree (اختياري)
+                  الدرجة العلمية (اختياري)
                 </label>
                 <select
                   id="reg-degree"
@@ -492,42 +503,130 @@ export default function AuthPage() {
                 </select>
               </div>
             </div>
-            {/* Department and Role in a grid */}
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="reg-department" className="block text-sm font-medium text-gray-700 mb-1">
-                  القسم
-                </label>
-                <select
-                  id="reg-department"
-                  value={registerData.department}
-                  onChange={(e) => handleInputChange('register', 'department', e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  disabled={isLoading || departmentOptions.length === 0}
-                >
-                  <option value="">{departmentOptions.length ? 'اختر القسم' : 'لا توجد أقسام متاحة'}</option>
-                  {departmentOptions.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="reg-role" className="block text-sm font-medium text-gray-700 mb-1">
-                  الدور (اختياري)
-                </label>
-                <select
-                  id="reg-role"
-                  value={registerData.role}
-                  onChange={(e) => handleInputChange('register', 'role', e.target.value.toLowerCase())}
-                  className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            {/* Department field */}
+            <div className="mt-4">
+              <label htmlFor="reg-department" className="block text-sm font-medium text-gray-700 mb-1">
+                القسم
+              </label>
+              <select
+                id="reg-department"
+                value={registerData.department}
+                onChange={(e) => handleInputChange('register', 'department', e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading || departmentOptions.length === 0}
+              >
+                <option value="">{departmentOptions.length ? 'اختر القسم' : 'لا توجد أقسام متاحة'}</option>
+                {departmentOptions.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Role field */}
+            <div className="mt-4">
+              <label htmlFor="reg-role" className="block text-sm font-medium text-gray-700 mb-1">
+                الدور (اختياري)
+              </label>
+              <select
+                id="reg-role"
+                value={registerData.role}
+                onChange={(e) => handleInputChange('register', 'role', e.target.value.toLowerCase())}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading}
+              >
+                <option value="employee">موظف</option>
+                <option value="manager">مسؤول</option>
+                <option value="admin">مدير</option>
+              </select>
+            </div>
+            
+            {/* Leave Balances Section - COMMENTED OUT FOR NOW */}
+            {/* 
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">رصيد الإجازات</h3>
+              <div className="space-y-4">
+                {registerData.leave_balances.map((balance, index) => (
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        نوع الإجازة
+                      </label>
+                      <input
+                        type="text"
+                        value={balance.leave_type_id || ''}
+                        onChange={(e) => {
+                          const newBalances = [...registerData.leave_balances];
+                          newBalances[index] = { ...newBalances[index], leave_type_id: e.target.value };
+                          setRegisterData(prev => ({ ...prev, leave_balances: newBalances }));
+                        }}
+                        className="w-full px-3 py-2 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        placeholder="مثال: إجازة سنوية"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        الأيام المتاحة
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={balance.available_days || ''}
+                        onChange={(e) => {
+                          const newBalances = [...registerData.leave_balances];
+                          newBalances[index] = { ...newBalances[index], available_days: parseInt(e.target.value) || 0 };
+                          setRegisterData(prev => ({ ...prev, leave_balances: newBalances }));
+                        }}
+                        className="w-full px-3 py-2 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        placeholder="0"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={balance.one_time_used || false}
+                          onChange={(e) => {
+                            const newBalances = [...registerData.leave_balances];
+                            newBalances[index] = { ...newBalances[index], one_time_used: e.target.checked };
+                            setRegisterData(prev => ({ ...prev, leave_balances: newBalances }));
+                          }}
+                          className="mr-2"
+                          disabled={isLoading}
+                        />
+                        <span className="text-sm text-gray-700">استخدام لمرة واحدة</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newBalances = registerData.leave_balances.filter((_, i) => i !== index);
+                          setRegisterData(prev => ({ ...prev, leave_balances: newBalances }));
+                        }}
+                        className="ml-2 text-red-600 hover:text-red-800"
+                        disabled={isLoading}
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegisterData(prev => ({
+                      ...prev,
+                      leave_balances: [...prev.leave_balances, { leave_type_id: '', available_days: 0, one_time_used: false }]
+                    }));
+                  }}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-teal-500 hover:text-teal-600 transition-colors"
                   disabled={isLoading}
                 >
-                  <option value="employee">موظف</option>
-                  <option value="manager">مسؤول</option>
-                  <option value="admin">مدير</option>
-                </select>
+                  + إضافة رصيد إجازة
+                </button>
               </div>
             </div>
+            */}
             
             <div className="mt-6">
               <button

@@ -21,37 +21,6 @@ export default function MyQuests() {
         return;
       }
 
-<<<<<<< HEAD
-      // Decode JWT to extract current user info
-      const decodeJwt = (tkn) => {
-        try {
-          const payload = tkn.split('.')[1];
-          const base = payload.replace(/-/g, '+').replace(/_/g, '/');
-          const json = decodeURIComponent(
-            atob(base)
-              .split('')
-              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-              .join('')
-          );
-          return JSON.parse(json);
-        } catch {
-          return {};
-        }
-      };
-
-      const userClaims = decodeJwt(token);
-      const cachedUserStr = localStorage.getItem('authUser');
-      const cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : {};
-
-      // Normalize helper
-      const norm = (v) => (v == null ? null : String(v).trim().toLowerCase());
-
-      // Collect possible identifiers from both sources (claims + cached user)
-      const currentUserId = userClaims.user_id || userClaims.id || userClaims.sub || cachedUser.id || cachedUser.user_id || null;
-      const currentEmployeeId = userClaims.employee_id || cachedUser.employee_id || cachedUser.employeeId || null;
-      const currentEmployeeName = userClaims.employee_name || userClaims.name || userClaims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
-      const currentEmail = userClaims.email || userClaims.employee_email || cachedUser.email || cachedUser.employee_email || null;
-=======
       // Get user data from localStorage to identify the current user
       const userDataStr = localStorage.getItem('authUser');
       if (!userDataStr) {
@@ -62,7 +31,6 @@ export default function MyQuests() {
 
       const userData = JSON.parse(userDataStr);
       const userId = userData.id || userData.user_id;
->>>>>>> 24b772c (work)
 
       const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
@@ -83,19 +51,6 @@ export default function MyQuests() {
       const result = await response.json();
       
       if (result.success) {
-<<<<<<< HEAD
-        const allRequests = Array.isArray(result.data) ? result.data : [];
-        // Filter requests to only those belonging to the logged-in user
-        const myRequests = allRequests.filter((req) => {
-          const matchesUserId = (req.user_id != null && currentUserId != null && String(req.user_id) === String(currentUserId))
-            || (req.employee_id != null && currentEmployeeId != null && String(req.employee_id) === String(currentEmployeeId));
-          const matchesName = norm(req.employee_name) && norm(currentEmployeeName) && norm(req.employee_name) === norm(currentEmployeeName);
-          const matchesEmail = (norm(req.email) && norm(currentEmail) && norm(req.email) === norm(currentEmail))
-            || (norm(req.employee_email) && norm(currentEmail) && norm(req.employee_email) === norm(currentEmail));
-          return matchesUserId || matchesName || matchesEmail;
-        });
-        setRequests(myRequests);
-=======
         // Filter requests for the current user only
         const userRequests = result.data.filter(req => {
           // Check if the request belongs to the current user
@@ -105,7 +60,6 @@ export default function MyQuests() {
                  (req.employee_name && userData.full_name && req.employee_name === userData.full_name);
         });
         setRequests(userRequests);
->>>>>>> 24b772c (work)
       } else {
         setError(result.message || "Failed to fetch requests.");
       }
@@ -296,19 +250,12 @@ export default function MyQuests() {
           <table className="requests-table" id="requests-table">
             <thead>
               <tr>
-<<<<<<< HEAD
-=======
                 <th>تاريخ الطلب</th>
->>>>>>> 24b772c (work)
                 <th>نوع الإجازة</th>
                 <th>من تاريخ</th>
                 <th>إلى تاريخ</th>
                 <th>عدد الأيام</th>
-<<<<<<< HEAD
-                <th>عدد الأيام</th>
-=======
                 <th>السبب</th>
->>>>>>> 24b772c (work)
                 <th>الحالة</th>
                 <th>تاريخ المعالجة</th>
                 <th>تمت المعالجة بواسطة</th>
@@ -318,16 +265,6 @@ export default function MyQuests() {
             <tbody>
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((r) => (
-<<<<<<< HEAD
-                  <tr key={r.request_no || r.id}>
-                    <td>{r.leave_type || '-'}</td>
-                    <td>{(r.start_date && String(r.start_date).includes('T')) ? r.start_date.split('T')[0] : (r.start_date || '-')}</td>
-                    <td>{(r.end_date && String(r.end_date).includes('T')) ? r.end_date.split('T')[0] : (r.end_date || '-')}</td>
-                    <td>{r.number_of_days != null ? r.number_of_days : '-'}</td>
-                    <td>{r.number_of_days != null ? r.number_of_days : '-'}</td>
-                    <td>
-                      <span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span>
-=======
                   <tr key={r.id || r.request_no}>
                     <td>{r.request_date?.split('T')[0] || r.date || '-'}</td>
                     <td>{r.leave_type || r.leave_type_name || '-'}</td>
@@ -348,20 +285,15 @@ export default function MyQuests() {
                       ) : (
                         <span className="no-action-text">-</span>
                       )}
->>>>>>> 24b772c (work)
                     </td>
                     <td>{(r.processing_date && String(r.processing_date).includes('T')) ? r.processing_date.split('T')[0] : (r.processing_date || '-')}</td>
-                    <td>{r.processed_by || '-'}</td>
+                    <td dir="rtl" className="text-right">{r.processed_by || '-'}</td>
                     <td>{r.reason_for_rejection || '-'}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-<<<<<<< HEAD
-                  <td colSpan="9" className="no-requests-found">لا توجد طلبات لعرضها.</td>
-=======
-                  <td colSpan="8" className="no-requests-found">لا توجد طلبات لعرضها.</td>
->>>>>>> 24b772c (work)
+                  <td colSpan="10" className="no-requests-found">لا توجد طلبات لعرضها.</td>
                 </tr>
               )}
             </tbody>

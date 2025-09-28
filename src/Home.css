@@ -705,6 +705,110 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* --- Last Request Card Six Column Design --- */
+.last-request-card-six-col,
+.last-request-card-five-col {
+    width: 100%;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, #fffbe3 0%, #f8f9fe 100%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 0;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.last-request-card-six-col:hover,
+.last-request-card-five-col:hover {
+    box-shadow: 0 0px 20px 0 rgba(90, 90, 90, 0.199);
+    background: linear-gradient(135deg, #fff3b0 0%, #fffbe3 100%);
+    border: 2px solid rgba(255, 193, 7, 0.4);
+}
+
+.last-request-card-six-col.approved,
+.last-request-card-five-col.approved {
+    background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
+    border: 2px solid #10b981;
+}
+
+.last-request-card-six-col.approved:hover,
+.last-request-card-five-col.approved:hover {
+    background: linear-gradient(135deg, #a7f3d0 0%, #d1fae5 100%);
+    border: 2px solid #059669;
+}
+
+.last-request-card-six-col.rejected,
+.last-request-card-five-col.rejected {
+    background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
+    border: 2px solid #ef4444;
+}
+
+.last-request-card-six-col.rejected:hover,
+.last-request-card-five-col.rejected:hover {
+    background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%);
+    border: 2px solid #dc2626;
+}
+
+/* Six and Five column specific styling */
+.last-request-card-six-col .summary-section,
+.last-request-card-five-col .summary-section {
+    flex: 1 1 0%;
+    text-align: center;
+    padding: 0 0.5rem;
+    min-width: 0; /* Allow flex items to shrink */
+}
+
+.last-request-card-six-col .summary-section:nth-child(1),
+.last-request-card-six-col .summary-section:nth-child(2),
+.last-request-card-six-col .summary-section:nth-child(3),
+.last-request-card-six-col .summary-section:nth-child(4),
+.last-request-card-six-col .summary-section:nth-child(5),
+.last-request-card-five-col .summary-section:nth-child(1),
+.last-request-card-five-col .summary-section:nth-child(2),
+.last-request-card-five-col .summary-section:nth-child(3),
+.last-request-card-five-col .summary-section:nth-child(4),
+.last-request-card-five-col .summary-section:nth-child(5) {
+    border-left: 1px solid #ddd;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.last-request-card-six-col .summary-main-value,
+.last-request-card-five-col .summary-main-value {
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+.last-request-card-six-col .summary-label,
+.last-request-card-five-col .summary-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Add red color for rejected requests */
+.summary-main-value-red {
+    color: #dc2626;
+}
+
+
+/* Add purple color for processor name */
+.summary-main-value-purple {
+    color: #7c3aed;
+}
+
 /* --- Responsive Design (Updated breakpoints) --- */
 
 /* Breakpoint for side-by-side to stack transition */
@@ -772,7 +876,9 @@
         font-size: 1em;
     }
 
-    .leave-balance-card-three-col {
+    .leave-balance-card-three-col,
+    .last-request-card-six-col,
+    .last-request-card-five-col {
         flex-direction: column;
         padding: 1rem 0;
     }
@@ -787,9 +893,20 @@
         border-bottom: 1px solid #ddd;
         margin-bottom: 1rem;
     }
-    
+
     .summary-main-value {
         font-size: 1.8rem;
+    }
+
+    /* Six and Five column responsive adjustments */
+    .last-request-card-six-col .summary-main-value,
+    .last-request-card-five-col .summary-main-value {
+        font-size: 1rem;
+    }
+
+    .last-request-card-six-col .summary-label,
+    .last-request-card-five-col .summary-label {
+        font-size: 0.7rem;
     }
     
     .summary-label {

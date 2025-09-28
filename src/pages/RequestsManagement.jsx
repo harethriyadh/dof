@@ -218,6 +218,29 @@ export default function RequestsManagement() {
     fetchUserProfile();
   }, []);
 
+  // Add horizontal scrolling with Alt + mouse wheel for processed requests table
+  useEffect(() => {
+    const handleWheelScroll = (e) => {
+      // Check if Alt key is pressed
+      if (e.altKey) {
+        const scrollContainer = document.getElementById('processed-requests-scroll-container');
+        if (scrollContainer) {
+          e.preventDefault();
+          // Scroll horizontally based on wheel direction
+          scrollContainer.scrollLeft += e.deltaY;
+        }
+      }
+    };
+
+    // Add event listener to the document
+    document.addEventListener('wheel', handleWheelScroll, { passive: false });
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener('wheel', handleWheelScroll);
+    };
+  }, []);
+
   // Enhanced handle approve/reject action
   const handleProcessRequest = async (requestId, action) => {
     try {
@@ -226,7 +249,7 @@ export default function RequestsManagement() {
       
       const requestBody = {
         status: action,
-        processed_by: "المدير الحالي",
+        processed_by: adminName && adminRole ? `${adminRole} - ${adminName}` : "رئيس الجامعة - -",
       };
 
       if (action === "rejected") {
@@ -339,7 +362,7 @@ export default function RequestsManagement() {
       const userToken = getAuthToken();
       
       // Format the processed_by field as per requirements
-      const processedBy = `المسؤول الحالي - ,ولكن تم رفضها من قبل السيد ${adminName} - ${adminRole}`;
+      const processedBy = `${adminRole} - ${adminName}`;
       
       // Format the reason_for_rejection field as per requirements
       const formattedReason = `مرفوض: ${rejectionReason}`;
@@ -642,9 +665,10 @@ export default function RequestsManagement() {
         <div className="section-header">
           <h3>الطلبات المعالجة</h3>
           <p>الطلبات التي تم اتخاذ قرار بشأنها</p>
+          <small className="scroll-hint">💡 اضغط Alt + عجلة الماوس للتمرير أفقيًا</small>
         </div>
 
-        <div className="table-responsive-wrapper">
+        <div className="table-responsive-wrapper" id="processed-requests-scroll-container">
           <table className="requests-table" id="processed-requests-table">
             <thead>
               <tr>
@@ -659,7 +683,7 @@ export default function RequestsManagement() {
                 <th>السبب</th>
                 <th>الحالة</th>
                 <th>تاريخ المعالجة</th>
-                <th>المنصب الاداري</th>
+                <th>الذي عالج الطلب</th>
                 <th>سبب الرفض</th>
               </tr>
             </thead>
@@ -724,7 +748,7 @@ export default function RequestsManagement() {
                       </span>
                     </td>
                     <td>{request.processing_date?.split('T')[0] || '-'}</td>
-                    <td>{request.processed_by || '-'}</td>
+                    <td dir="rtl" className="text-right">{request.processed_by || '-'}</td>
                     <td>{request.reason_for_rejection || "-"}</td>
                   </tr>
                 ))
@@ -803,7 +827,7 @@ export default function RequestsManagement() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="admin-role">المنصب الاداري:</label>
+                <label htmlFor="admin-role">الذي عالج الطلب:</label>
                 <input
                   type="text"
                   id="admin-role"

@@ -226,6 +226,47 @@
     }
 }
 
+/* --- Actions Cell Styling --- */
+.actions-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.btn-action {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+}
+
+.delete-request-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.delete-request-btn:hover {
+    background-color: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.delete-request-btn:active {
+    transform: translateY(0);
+}
+
+.no-action-text {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
 /* --- Responsive Design for Page Headers --- */
 @media (max-width: 600px) {
     .page-header {
@@ -239,5 +280,10 @@
 
     .page-header p {
         font-size: 1rem;
+    }
+    
+    .btn-action {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
     }
 }

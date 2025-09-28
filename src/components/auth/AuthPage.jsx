@@ -14,14 +14,15 @@ export default function AuthPage() {
     password: ''
   });
 
-  // Register form state - ADDED 'gender' HERE
+  // Register form state - ADDED 'gender', 'administrative_position', and 'degree' HERE
   const [registerData, setRegisterData] = useState({
     full_name: '',
     username: '',
     password: '',
     phone: '',
     gender: '', // New field added
-    specialist: '',
+    administrative_position: '', // New field added
+    degree: '', // New field added
     college: '',
     department: '',
     role: 'employee'
@@ -61,6 +62,26 @@ export default function AuthPage() {
     ? collegesMap[registerData.college]
     : [];
 
+  // Administrative position options
+  const administrativePositionOptions = [
+    'رئيس الجامعة',
+    'المساعد العلمي',
+    'المساعد الاداري',
+    'العميد',
+    'مساعد العميد',
+    'رئيس القسم',
+    'مدير قسم الادارية',
+    'الموارد البشرية'
+  ];
+
+  // Degree options
+  const degreeOptions = [
+    'معهد',
+    'بكلوريوس',
+    'ماجستير',
+    'دكتوراة'
+  ];
+
   // Helpers: validation for registration per spec - ADDED 'gender' VALIDATION
   const validateRegister = (payload) => {
     const errors = [];
@@ -82,6 +103,16 @@ export default function AuthPage() {
     // New validation for gender
     if (!payload.gender || !['male', 'female'].includes(String(payload.gender).toLowerCase())) {
         errors.push({ field: 'gender', message: 'النوع (الجنس) مطلوب ويجب أن يكون ذكراً أو أنثى' });
+    }
+    
+    // New validation for administrative position
+    if (payload.administrative_position && !administrativePositionOptions.includes(payload.administrative_position)) {
+        errors.push({ field: 'administrative_position', message: 'المنصب الاداري غير صالح' });
+    }
+    
+    // New validation for degree
+    if (payload.degree && !degreeOptions.includes(payload.degree)) {
+        errors.push({ field: 'degree', message: 'الدرجة العلمية غير صالحة' });
     }
 
     const checkLen = (value, field) => {
@@ -185,7 +216,9 @@ export default function AuthPage() {
       username: registerData.username,
       password: registerData.password,
       phone: registerData.phone,
-      gender: registerData.gender // Make sure the new required field is here
+      gender: registerData.gender, // Make sure the new required field is here
+      administrative_position: registerData.administrative_position, // Include administrative position
+      degree: registerData.degree // Include degree
     };
 
 
@@ -404,20 +437,42 @@ export default function AuthPage() {
               </div>
               {/* END NEW GENDER FIELD */}
             </div>
-            {/* Specialist and College in a grid */}
+            {/* Administrative Position field */}
+            <div className="mt-4">
+              <label htmlFor="reg-administrative-position" className="block text-sm font-medium text-gray-700 mb-1">
+                المنصب الاداري (اختياري)
+              </label>
+              <select
+                id="reg-administrative-position"
+                value={registerData.administrative_position}
+                onChange={(e) => handleInputChange('register', 'administrative_position', e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                disabled={isLoading}
+              >
+                <option value="">اختر المنصب الاداري</option>
+                {administrativePositionOptions.map((position) => (
+                  <option key={position} value={position}>{position}</option>
+                ))}
+              </select>
+            </div>
+            {/* Degree and College in a grid */}
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="reg-specialist" className="block text-sm font-medium text-gray-700 mb-1">
-                  الاختصاص (اختياري)
+                <label htmlFor="reg-degree" className="block text-sm font-medium text-gray-700 mb-1">
+                  Degree (اختياري)
                 </label>
-                <input
-                  type="text"
-                  id="reg-specialist"
-                  value={registerData.specialist}
-                  onChange={(e) => handleInputChange('register', 'specialist', e.target.value)}
+                <select
+                  id="reg-degree"
+                  value={registerData.degree}
+                  onChange={(e) => handleInputChange('register', 'degree', e.target.value)}
                   className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   disabled={isLoading}
-                />
+                >
+                  <option value="">اختر الدرجة العلمية</option>
+                  {degreeOptions.map((degree) => (
+                    <option key={degree} value={degree}>{degree}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="reg-college" className="block text-sm font-medium text-gray-700 mb-1">

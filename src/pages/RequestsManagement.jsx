@@ -8,6 +8,16 @@ export default function RequestsManagement() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState(null);
 
+  // State for processed request rejection modal
+  const [showProcessedRejectionModal, setShowProcessedRejectionModal] = useState(false);
+  const [processedRejectionReason, setProcessedRejectionReason] = useState("");
+  const [selectedProcessedRequestId, setSelectedProcessedRequestId] = useState(null);
+  const [adminName, setAdminName] = useState("");
+  const [adminRole, setAdminRole] = useState("");
+
+  // State for user profile
+  const [userProfile, setUserProfile] = useState(null);
+
   // State for processed requests filter and export
   const [processedStatusFilter, setProcessedStatusFilter] = useState("all");
   const [isExportingProcessed, setIsExportingProcessed] = useState(false);
@@ -37,6 +47,75 @@ export default function RequestsManagement() {
     }
     
     return token;
+  };
+
+  // Function to check if a processed request can be rejected (within 5 hours)
+  const canRejectProcessedRequest = (request) => {
+    if (!request.processing_date) return false;
+    
+    const processingDate = new Date(request.processing_date);
+    const currentDate = new Date();
+    const timeDifference = currentDate - processingDate;
+    const hoursDifference = timeDifference / (1000 * 60 * 60); // Convert to hours
+    
+    return hoursDifference <= 5;
+  };
+
+  // Function to get user profile data from localStorage or API
+  const fetchUserProfile = async () => {
+    try {
+      // First try to get user data from localStorage (stored during login)
+      const userDataStr = localStorage.getItem('authUser');
+      
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        setUserProfile(userData);
+        
+        // Auto-populate admin name and administrative position from cached user data
+        const adminName = userData.full_name || userData.name || userData.username || '';
+        const adminRole = userData.administrative_position || userData.role || '';
+        
+        setAdminName(adminName);
+        setAdminRole(adminRole);
+        
+        console.log('User profile loaded from localStorage:', { adminName, adminRole });
+        return;
+      }
+      
+      // Fallback: fetch from API if localStorage is empty
+      console.log('No user data in localStorage, fetching from API...');
+      const userToken = getAuthToken();
+      
+      const response = await fetch("http://localhost:3000/api/auth/profile", {
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data?.user) {
+        const userData = result.data.user;
+        setUserProfile(userData);
+        
+        const adminName = userData.full_name || userData.name || userData.username || '';
+        const adminRole = userData.administrative_position || userData.role || '';
+        
+        setAdminName(adminName);
+        setAdminRole(adminRole);
+        
+        console.log('User profile loaded from API:', { adminName, adminRole });
+      } else {
+        console.warn('Could not fetch user profile from API:', result.message);
+        setAdminName('');
+        setAdminRole('');
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setAdminName('');
+      setAdminRole('');
+    }
   };
 
   // Enhanced error handling function
@@ -136,6 +215,7 @@ export default function RequestsManagement() {
   // Fetch data on component mount
   useEffect(() => {
     fetchRequests();
+    fetchUserProfile();
   }, []);
 
   // Enhanced handle approve/reject action
@@ -219,6 +299,93 @@ export default function RequestsManagement() {
     setSelectedRequestId(null);
   };
 
+  // Handle processed request reject button click - opens modal
+  const handleProcessedRejectClick = (requestId) => {
+    setSelectedProcessedRequestId(requestId);
+    setProcessedRejectionReason("");
+    
+    // Refresh user profile data when opening modal
+    fetchUserProfile();
+    
+    setShowProcessedRejectionModal(true);
+  };
+
+  // Handle processed request rejection form submission
+  const handleProcessedRejectionSubmit = async (e) => {
+    e.preventDefault();
+    if (processedRejectionReason.trim()) {
+      if (!adminName.trim() || !adminRole.trim()) {
+        setError('لم يتم تحميل بيانات المستخدم. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.');
+        return;
+      }
+      await handleProcessedRequestRejection(selectedProcessedRequestId, processedRejectionReason, adminName, adminRole);
+    } else {
+      setError('يرجى كتابة سبب الرفض.');
+    }
+  };
+
+  // Handle processed request rejection modal close
+  const handleProcessedModalClose = () => {
+    setShowProcessedRejectionModal(false);
+    setProcessedRejectionReason("");
+    setSelectedProcessedRequestId(null);
+    setAdminName("");
+    setAdminRole("");
+  };
+
+  // Handle processed request rejection API call
+  const handleProcessedRequestRejection = async (requestId, rejectionReason, adminName, adminRole) => {
+    try {
+      const userToken = getAuthToken();
+      
+      // Format the processed_by field as per requirements
+      const processedBy = `المسؤول الحالي - ,ولكن تم رفضها من قبل السيد ${adminName} - ${adminRole}`;
+      
+      // Format the reason_for_rejection field as per requirements
+      const formattedReason = `مرفوض: ${rejectionReason}`;
+      
+      const requestBody = {
+        status: "rejected",
+        processed_by: processedBy,
+        reason_for_rejection: formattedReason,
+      };
+
+      const response = await fetch(
+        `http://localhost:3000/api/leave-requests/${requestId}/process`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log(`Processed request rejected successfully:`, result.data);
+        
+        // Re-fetch the data to keep the UI in sync
+        await fetchRequests();
+        
+        // Close rejection modal
+        handleProcessedModalClose();
+      } else {
+        handleApiError(result, response);
+      }
+    } catch (error) {
+      console.error("Error rejecting processed request:", error);
+      
+      if (error.message.includes('No authentication token')) {
+        setError('Please login first to access this page.');
+      } else {
+        handleApiError(error);
+      }
+    }
+  };
+
   // Filter processed requests based on status
   const filteredProcessedRequests = useMemo(() => {
     if (processedStatusFilter === "all") {
@@ -273,42 +440,44 @@ export default function RequestsManagement() {
     [pendingRequests, processedRequests]
   );
 
-  // ✅ FIX 6: Enhanced loading state with retry option
-  if (isLoading) {
-    return (
-      <div className="requests-management-container">
-        <div className="loading-state">
+  // Loading component for data values
+  const LoadingValue = ({ children, className = "" }) => (
+    <div className={`loading-value ${className}`}>
+      {isLoading ? (
+        <div className="loading-spinner">
           <i className="fas fa-spinner fa-spin"></i>
-          <p>جاري تحميل الطلبات...</p>
         </div>
-      </div>
-    );
-  }
+      ) : (
+        children
+      )}
+    </div>
+  );
 
-  // ✅ FIX 7: Enhanced error state with retry option
-  if (error) {
-    return (
-      <div className="requests-management-container">
-        <div className="error-state">
-          <i className="fas fa-exclamation-triangle"></i>
-          <p>{error}</p>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => {
-              setError(null);
-              fetchRequests();
-            }}
-          >
-            <i className="fas fa-redo"></i>
-            إعادة المحاولة
-          </button>
-        </div>
+  // Error display component
+  const ErrorDisplay = () => (
+    error && (
+      <div className="error-banner">
+        <i className="fas fa-exclamation-triangle"></i>
+        <span>{error}</span>
+        <button 
+          className="btn btn-sm btn-primary" 
+          onClick={() => {
+            setError(null);
+            fetchRequests();
+          }}
+        >
+          <i className="fas fa-redo"></i>
+          إعادة المحاولة
+        </button>
       </div>
-    );
-  }
+    )
+  );
 
   return (
     <div className="requests-management-container">
+      {/* Error Display */}
+      <ErrorDisplay />
+
       {/* Page Header */}
       <div className="page-header">
         <h2>إدارة الطلبات</h2>
@@ -325,27 +494,27 @@ export default function RequestsManagement() {
       <div className="summary-cards-grid">
         <div className="card summary-card summary-card-pending">
           <div className="summary-card-content">
-            <div className="summary-main-value summary-main-value-pending">
+            <LoadingValue className="summary-main-value summary-main-value-pending">
               {counts.pending}
-            </div>
+            </LoadingValue>
             <div className="summary-label">الطلبات المعلقة</div>
           </div>
         </div>
 
         <div className="card summary-card summary-card-approved">
           <div className="summary-card-content">
-            <div className="summary-main-value summary-main-value-approved">
+            <LoadingValue className="summary-main-value summary-main-value-approved">
               {counts.approved}
-            </div>
+            </LoadingValue>
             <div className="summary-label">الطلبات المعتمدة</div>
           </div>
         </div>
 
         <div className="card summary-card summary-card-rejected">
           <div className="summary-card-content">
-            <div className="summary-main-value summary-main-value-rejected">
+            <LoadingValue className="summary-main-value summary-main-value-rejected">
               {counts.rejected}
-            </div>
+            </LoadingValue>
             <div className="summary-label">الطلبات المرفوضة</div>
           </div>
         </div>
@@ -374,7 +543,16 @@ export default function RequestsManagement() {
               </tr>
             </thead>
             <tbody>
-              {pendingRequests.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan="9" className="loading-data">
+                    <div className="loading-spinner">
+                      <i className="fas fa-spinner fa-spin"></i>
+                      <span>جاري تحميل الطلبات المعلقة...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : pendingRequests.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="no-data">
                     <i className="fas fa-inbox"></i>
@@ -470,6 +648,7 @@ export default function RequestsManagement() {
           <table className="requests-table" id="processed-requests-table">
             <thead>
               <tr>
+                <th>الإجراءات</th>
                 <th>تاريخ الطلب</th>
                 <th>اسم الموظف</th>
                 <th>القسم</th>
@@ -480,14 +659,23 @@ export default function RequestsManagement() {
                 <th>السبب</th>
                 <th>الحالة</th>
                 <th>تاريخ المعالجة</th>
-                <th>تمت المعالجة بواسطة</th>
+                <th>المنصب الاداري</th>
                 <th>سبب الرفض</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProcessedRequests.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan="12" className="no-data">
+                  <td colSpan="13" className="loading-data">
+                    <div className="loading-spinner">
+                      <i className="fas fa-spinner fa-spin"></i>
+                      <span>جاري تحميل الطلبات المعالجة...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredProcessedRequests.length === 0 ? (
+                <tr>
+                  <td colSpan="13" className="no-data">
                     <i className="fas fa-inbox"></i>
                     <p>لا توجد طلبات معالجة</p>
                   </td>
@@ -500,6 +688,24 @@ export default function RequestsManagement() {
                       request.status
                     )}`}
                   >
+                    <td className="actions-cell">
+                      <div className="action-buttons">
+                        {canRejectProcessedRequest(request) && request.status === "approved" && (
+                          <button
+                            className="btn btn-reject"
+                            onClick={() => handleProcessedRejectClick(request.request_no)}
+                            title="رفض الطلب المعالج"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        )}
+                        {!canRejectProcessedRequest(request) && request.status === "approved" && (
+                          <span className="disabled-action" title="لا يمكن رفض الطلب بعد مرور 5 ساعات">
+                            <i className="fas fa-clock"></i>
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td>{request.request_date?.split('T')[0]}</td>
                     <td>{request.employee_name}</td>
                     <td>{request.department}</td>
@@ -562,6 +768,77 @@ export default function RequestsManagement() {
                 </button>
                 <button type="submit" className="btn btn-danger">
                   رفض الطلب
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Processed Request Rejection Modal */}
+      {showProcessedRejectionModal && (
+        <div className="modal-overlay" onClick={handleProcessedModalClose}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>رفض الطلب المعالج</h3>
+              <button className="modal-close-btn" onClick={handleProcessedModalClose}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleProcessedRejectionSubmit} className="modal-form">
+              <div className="form-group">
+                <label htmlFor="admin-name">اسم المسؤول:</label>
+                <input
+                  type="text"
+                  id="admin-name"
+                  value={adminName || 'جاري تحميل البيانات...'}
+                  readOnly
+                  className="readonly-field"
+                  placeholder="جاري تحميل البيانات..."
+                />
+                {!adminName && (
+                  <small className="loading-text">جاري تحميل بيانات المستخدم...</small>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="admin-role">المنصب الاداري:</label>
+                <input
+                  type="text"
+                  id="admin-role"
+                  value={adminRole || 'جاري تحميل البيانات...'}
+                  readOnly
+                  className="readonly-field"
+                  placeholder="جاري تحميل البيانات..."
+                />
+                {!adminRole && (
+                  <small className="loading-text">جاري تحميل بيانات المستخدم...</small>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="processed-rejection-reason">سبب الرفض:</label>
+                <textarea
+                  id="processed-rejection-reason"
+                  value={processedRejectionReason}
+                  onChange={(e) => setProcessedRejectionReason(e.target.value)}
+                  placeholder="يرجى كتابة سبب رفض الطلب المعالج..."
+                  required
+                  rows="4"
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleProcessedModalClose}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="btn btn-danger">
+                  رفض الطلب المعالج
                 </button>
               </div>
             </form>

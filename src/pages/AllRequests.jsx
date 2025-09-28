@@ -21,6 +21,7 @@ export default function MyQuests() {
         return;
       }
 
+<<<<<<< HEAD
       // Decode JWT to extract current user info
       const decodeJwt = (tkn) => {
         try {
@@ -50,6 +51,18 @@ export default function MyQuests() {
       const currentEmployeeId = userClaims.employee_id || cachedUser.employee_id || cachedUser.employeeId || null;
       const currentEmployeeName = userClaims.employee_name || userClaims.name || userClaims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
       const currentEmail = userClaims.email || userClaims.employee_email || cachedUser.email || cachedUser.employee_email || null;
+=======
+      // Get user data from localStorage to identify the current user
+      const userDataStr = localStorage.getItem('authUser');
+      if (!userDataStr) {
+        setError("User data not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+
+      const userData = JSON.parse(userDataStr);
+      const userId = userData.id || userData.user_id;
+>>>>>>> 24b772c (work)
 
       const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
@@ -70,6 +83,7 @@ export default function MyQuests() {
       const result = await response.json();
       
       if (result.success) {
+<<<<<<< HEAD
         const allRequests = Array.isArray(result.data) ? result.data : [];
         // Filter requests to only those belonging to the logged-in user
         const myRequests = allRequests.filter((req) => {
@@ -81,6 +95,17 @@ export default function MyQuests() {
           return matchesUserId || matchesName || matchesEmail;
         });
         setRequests(myRequests);
+=======
+        // Filter requests for the current user only
+        const userRequests = result.data.filter(req => {
+          // Check if the request belongs to the current user
+          return req.user_id === userId || 
+                 req.employee_id === userId ||
+                 req.created_by === userId ||
+                 (req.employee_name && userData.full_name && req.employee_name === userData.full_name);
+        });
+        setRequests(userRequests);
+>>>>>>> 24b772c (work)
       } else {
         setError(result.message || "Failed to fetch requests.");
       }
@@ -99,13 +124,13 @@ export default function MyQuests() {
   // Filtered requests based on status
   const filteredRequests = statusFilter === 'all' ? requests : requests.filter(r => r.status === statusFilter);
 
-  // Handle delete request
+  // Handle delete request - only for pending requests
   const handleDeleteRequest = async (id) => {
-    if (window.confirm("Are you sure you want to delete this request?")) {
+    if (window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) {
       try {
         const token = localStorage.getItem('authToken');
         if (!token) {
-          setExportMessage("Please login first to delete requests.");
+          setExportMessage("يرجى تسجيل الدخول أولاً لحذف الطلبات.");
           setTimeout(() => setExportMessage(""), 3000);
           return;
         }
@@ -121,7 +146,7 @@ export default function MyQuests() {
         if (!response.ok) {
           if (response.status === 401) {
             localStorage.removeItem('authToken');
-            setExportMessage("Session expired. Please login again.");
+            setExportMessage("انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.");
             setTimeout(() => setExportMessage(""), 3000);
             return;
           }
@@ -132,29 +157,19 @@ export default function MyQuests() {
         
         if (result.success) {
           // Remove the deleted request from the state
-          setRequests(requests.filter(req => req.id !== id));
-          setExportMessage("Request deleted successfully.");
+          setRequests(requests.filter(req => (req.id || req.request_no) !== id));
+          setExportMessage("تم حذف الطلب بنجاح.");
           setTimeout(() => setExportMessage(""), 3000);
         } else {
-          setExportMessage(result.message || "Failed to delete request.");
+          setExportMessage(result.message || "فشل في حذف الطلب.");
           setTimeout(() => setExportMessage(""), 3000);
         }
       } catch (err) {
-        setExportMessage("Failed to delete request.");
+        setExportMessage("فشل في حذف الطلب.");
         setTimeout(() => setExportMessage(""), 3000);
         console.error("Error deleting request:", err);
       }
     }
-  };
-
-  // Handle edit request (this would likely navigate to a new page or open a modal)
-  const handleEditRequest = (id) => {
-    // Implement navigation or open a modal to edit the request.
-    // For now, we'll just log it.
-    console.log(`Editing request with ID: ${id}`);
-    // A real implementation might use: navigate(`/edit-request/${id}`);
-    setExportMessage("Edit functionality is not fully implemented in this example.");
-    setTimeout(() => setExportMessage(""), 3000);
   };
   
   // Function to determine badge class
@@ -206,7 +221,7 @@ export default function MyQuests() {
     <div className="requests-container">
       <div className="page-header">
         <h2>طلباتي</h2>
-        <p>مراجعة ومتابعة جميع طلبات الإجازة الخاصة بك</p>
+        <p>مراجعة ومتابعة جميع طلبات الإجازة التي قمت بإنشائها</p>
       </div>
 
       <div className="summary-cards-grid">
@@ -281,11 +296,19 @@ export default function MyQuests() {
           <table className="requests-table" id="requests-table">
             <thead>
               <tr>
+<<<<<<< HEAD
+=======
+                <th>تاريخ الطلب</th>
+>>>>>>> 24b772c (work)
                 <th>نوع الإجازة</th>
                 <th>من تاريخ</th>
                 <th>إلى تاريخ</th>
                 <th>عدد الأيام</th>
+<<<<<<< HEAD
                 <th>عدد الأيام</th>
+=======
+                <th>السبب</th>
+>>>>>>> 24b772c (work)
                 <th>الحالة</th>
                 <th>تاريخ المعالجة</th>
                 <th>تمت المعالجة بواسطة</th>
@@ -295,6 +318,7 @@ export default function MyQuests() {
             <tbody>
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((r) => (
+<<<<<<< HEAD
                   <tr key={r.request_no || r.id}>
                     <td>{r.leave_type || '-'}</td>
                     <td>{(r.start_date && String(r.start_date).includes('T')) ? r.start_date.split('T')[0] : (r.start_date || '-')}</td>
@@ -303,6 +327,28 @@ export default function MyQuests() {
                     <td>{r.number_of_days != null ? r.number_of_days : '-'}</td>
                     <td>
                       <span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span>
+=======
+                  <tr key={r.id || r.request_no}>
+                    <td>{r.request_date?.split('T')[0] || r.date || '-'}</td>
+                    <td>{r.leave_type || r.leave_type_name || '-'}</td>
+                    <td>{r.start_date?.split('T')[0] || r.from_date || '-'}</td>
+                    <td>{r.end_date?.split('T')[0] || r.to_date || '-'}</td>
+                    <td>{r.number_of_days || r.days || '-'}</td>
+                    <td>{r.reason || r.description || '-'}</td>
+                    <td><span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span></td>
+                    <td className="actions-cell">
+                      {r.status === 'pending' ? (
+                        <button
+                          className="btn-action delete-request-btn"
+                          onClick={() => handleDeleteRequest(r.id || r.request_no)}
+                          title="حذف الطلب"
+                        >
+                          <i className="fas fa-trash-alt"></i> حذف
+                        </button>
+                      ) : (
+                        <span className="no-action-text">-</span>
+                      )}
+>>>>>>> 24b772c (work)
                     </td>
                     <td>{(r.processing_date && String(r.processing_date).includes('T')) ? r.processing_date.split('T')[0] : (r.processing_date || '-')}</td>
                     <td>{r.processed_by || '-'}</td>
@@ -311,7 +357,11 @@ export default function MyQuests() {
                 ))
               ) : (
                 <tr>
+<<<<<<< HEAD
                   <td colSpan="9" className="no-requests-found">لا توجد طلبات لعرضها.</td>
+=======
+                  <td colSpan="8" className="no-requests-found">لا توجد طلبات لعرضها.</td>
+>>>>>>> 24b772c (work)
                 </tr>
               )}
             </tbody>

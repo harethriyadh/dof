@@ -3,4 +3,14 @@
 
 - uncomment this ones:
     - [AuthPage.jsx]:[ 540 ]
-    - 
+    - on this page "src/pages/RequestsManagement.jsx", if role = "admin" -> make sure that this table showes this types of requests only.
+        - if administrative_position = العميد
+        - if administrative_position = رئيس القسم
+        - if administrative_position = رئيس القسم
+        - if administrative_position = عميد
+        - if administrative_position = عميد
+        - if administrative_position = عميد
+
+
+
+        - if "المنصب الاداري" =  

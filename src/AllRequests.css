@@ -96,10 +96,21 @@
 
 /* --- Table Section --- */
 .table-responsive-wrapper {
-    overflow-x: auto;
+    /* Enables scrolling for the user view */
+    overflow-x: auto; 
+    width: 100%; 
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* Temporary class to force full rendering during PDF creation */
+.force-full-width {
+    overflow-x: visible !important;
+    width: max-content !important; /* Forces the wrapper to expand */
 }
 
 .requests-table {
+    /* Ensures the table is wide enough to force the scrollbar */
+    min-width: 1200px; 
     width: 100%;
     border-collapse: collapse;
     background-color: #fff;

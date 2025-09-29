@@ -247,9 +247,17 @@ export default function RequestsManagement() {
       // ✅ FIX 5: Get actual JWT token
       const userToken = getAuthToken();
       
+      // Format processed_by field according to requirements
+      let processedBy = "";
+      if (action === "approved") {
+        processedBy = `approved by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
+      } else if (action === "rejected") {
+        processedBy = `rejected by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
+      }
+      
       const requestBody = {
         status: action,
-        processed_by: adminName && adminRole ? `${adminRole} - ${adminName}` : "رئيس الجامعة - -",
+        processed_by: processedBy,
       };
 
       if (action === "rejected") {
@@ -362,7 +370,7 @@ export default function RequestsManagement() {
       const userToken = getAuthToken();
       
       // Format the processed_by field as per requirements
-      const processedBy = `${adminRole} - ${adminName}`;
+      const processedBy = `rejected by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
       
       // Format the reason_for_rejection field as per requirements
       const formattedReason = `مرفوض: ${rejectionReason}`;

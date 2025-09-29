@@ -326,6 +326,7 @@ export default function AuthPage() {
                 onChange={(e) => handleInputChange('login', 'password', e.target.value)}
                 className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 disabled={isLoading}
+                placeholder=""
                 required
               />
             </div>
@@ -409,6 +410,7 @@ export default function AuthPage() {
                 onChange={(e) => handleInputChange('register', 'password', e.target.value)}
                 className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 disabled={isLoading}
+                placeholder=""
                 required
               />
             </div>

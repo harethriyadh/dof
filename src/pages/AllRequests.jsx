@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../AllRequests.css"; // Import the CSS file
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function MyQuests() {
   const [statusFilter, setStatusFilter] = useState('all');
@@ -159,16 +161,81 @@ export default function MyQuests() {
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
 
-  // The handleExportPDF function from the original code remains unchanged as it uses html2canvas and jsPDF.
-  // The prompt states to "not use Canvas" and to "give me the full edited code". However,
-  // the original `handleExportPDF` relies on `html2canvas`, which is a `canvas` library.
-  // The provided `jsPDF` library alone cannot convert an HTML table to a clean PDF with proper
-  // formatting without either a canvas-based approach (like `html2canvas`) or a server-side
-  // library, or complex manual positioning, which is outside the scope of a simple client-side
-  // component update. Therefore, the `handleExportPDF` function will be removed as per the instruction.
-  const handleExportPDF = () => {
-    setExportMessage("Export functionality is disabled as per instructions.");
-    setTimeout(() => setExportMessage(""), 3000);
+  const handleExportPDF = async () => {
+    try {
+      setExportMessage("جاري تصدير PDF...");
+      
+      // Get the table element and wrapper
+      const table = document.getElementById('requests-table');
+      const wrapper = document.querySelector('.table-responsive-wrapper');
+      
+      if (!table || !wrapper) {
+        setExportMessage("لم يتم العثور على الجدول للتصدير.");
+        setTimeout(() => setExportMessage(""), 3000);
+        return;
+      }
+
+      // Temporarily apply the full-width style to the wrapper
+      wrapper.classList.add('force-full-width');
+
+      // Configure html2canvas options (captures full width due to overridden styles)
+      const options = {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: table.scrollWidth,
+        height: table.scrollHeight
+      };
+
+      // Generate canvas from table
+      const canvas = await html2canvas(table, options);
+      const imgData = canvas.toDataURL('image/png');
+      
+      // IMMEDIATELY remove the temporary style to restore responsiveness
+      wrapper.classList.remove('force-full-width');
+      
+      // Create PDF in Landscape Mode ('l')
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const imgWidth = 297; // A4 Landscape width
+      const pageHeight = 210; // A4 Landscape height
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to PDF
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Set RTL direction for Arabic text
+      pdf.setR2L(true);
+      
+      // Save the PDF
+      pdf.save('طلباتي.pdf');
+      
+      setExportMessage("تم تصدير PDF بنجاح!");
+      setTimeout(() => setExportMessage(""), 3000);
+      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setExportMessage("فشل في تصدير PDF. يرجى المحاولة مرة أخرى.");
+      setTimeout(() => setExportMessage(""), 3000);
+      
+      // Ensure cleanup even on error
+      const wrapper = document.querySelector('.table-responsive-wrapper');
+      if (wrapper) {
+        wrapper.classList.remove('force-full-width');
+      }
+    }
   };
 
   return (
@@ -250,14 +317,14 @@ export default function MyQuests() {
           <table className="requests-table" id="requests-table">
             <thead>
               <tr>
-                <th>تاريخ الطلب</th>
-                <th>نوع الإجازة</th>
-                <th>من تاريخ</th>
-                <th>إلى تاريخ</th>
-                <th>عدد الأيام</th>
-                <th>السبب</th>
-                <th>الحالة</th>
-                <th>تاريخ المعالجة</th>
+                <th style={{textAlign: 'center'}}></th>
+                <th style={{textAlign: 'center'}}>الحالة</th>
+                <th style={{textAlign: 'center'}}>نوع الإجازة</th>
+                <th style={{textAlign: 'center'}}>الفترة الزمنية</th>
+                <th style={{textAlign: 'center'}}>عدد الأيام</th>
+                <th style={{textAlign: 'center'}}>السبب</th>
+                <th style={{textAlign: 'center'}}>تاريخ الطلب</th>
+                <th style={{textAlign: 'center'}}>تاريخ المعالجة</th>
                 <th>تمت المعالجة بواسطة</th>
                 <th>سبب الرفض</th>
               </tr>
@@ -266,14 +333,7 @@ export default function MyQuests() {
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((r) => (
                   <tr key={r.id || r.request_no}>
-                    <td>{r.request_date?.split('T')[0] || r.date || '-'}</td>
-                    <td>{r.leave_type || r.leave_type_name || '-'}</td>
-                    <td>{r.start_date?.split('T')[0] || r.from_date || '-'}</td>
-                    <td>{r.end_date?.split('T')[0] || r.to_date || '-'}</td>
-                    <td>{r.number_of_days || r.days || '-'}</td>
-                    <td>{r.reason || r.description || '-'}</td>
-                    <td><span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span></td>
-                    <td className="actions-cell">
+                    <td className="actions-cell" style={{textAlign: 'center'}}>
                       {r.status === 'pending' ? (
                         <button
                           className="btn-action delete-request-btn"
@@ -286,7 +346,27 @@ export default function MyQuests() {
                         <span className="no-action-text">-</span>
                       )}
                     </td>
-                    <td>{(r.processing_date && String(r.processing_date).includes('T')) ? r.processing_date.split('T')[0] : (r.processing_date || '-')}</td>
+                    <td style={{textAlign: 'center'}}><span className={`status-badge ${getStatusBadge(r.status)}`}>{getStatusText(r.status)}</span></td>
+                    <td style={{textAlign: 'center'}}>{r.leave_type || r.leave_type_name || '-'}</td>
+                    <td style={{textAlign: 'center', whiteSpace: 'nowrap'}}>
+                      {(() => {
+                        const startDate = r.start_date?.split('T')[0] || r.from_date;
+                        const endDate = r.end_date?.split('T')[0] || r.to_date;
+                        if (startDate && endDate) {
+                          const startYear = startDate.split('-')[0];
+                          const startMonth = startDate.split('-')[1];
+                          const startDay = startDate.split('-')[2];
+                          const endMonth = endDate.split('-')[1];
+                          const endDay = endDate.split('-')[2];
+                          return `${startYear} ( ${startMonth}/${startDay} الى ${endMonth}/${endDay} )`;
+                        }
+                        return '-';
+                      })()}
+                    </td>
+                    <td style={{textAlign: 'center'}}>{r.number_of_days || r.days || '-'}</td>
+                    <td style={{textAlign: 'center'}}>{r.reason || r.description || '-'}</td>
+                    <td style={{textAlign: 'center'}}>{r.request_date?.split('T')[0] || r.date || '-'}</td>
+                    <td style={{textAlign: 'center'}}>{(r.processing_date && String(r.processing_date).includes('T')) ? r.processing_date.split('T')[0] : (r.processing_date || '-')}</td>
                     <td dir="rtl" className="text-right">{r.processed_by || '-'}</td>
                     <td>{r.reason_for_rejection || '-'}</td>
                   </tr>

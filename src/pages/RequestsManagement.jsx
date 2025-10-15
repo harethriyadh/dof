@@ -15,6 +15,14 @@ export default function RequestsManagement() {
   const [adminName, setAdminName] = useState("");
   const [adminRole, setAdminRole] = useState("");
 
+  // State for approve (spare employee) modal
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [selectedApproveRequestId, setSelectedApproveRequestId] = useState(null);
+  const [spareEmployee, setSpareEmployee] = useState("");
+  const [spareEmployeeId, setSpareEmployeeId] = useState("");
+  const [departmentUsers, setDepartmentUsers] = useState([]);
+  const [isLoadingDeptUsers, setIsLoadingDeptUsers] = useState(false);
+
   // State for user profile
   const [userProfile, setUserProfile] = useState(null);
 
@@ -47,6 +55,86 @@ export default function RequestsManagement() {
     }
     
     return token;
+  };
+
+  // Get current user's department info from cache or loaded profile
+  const getCurrentUserDepartmentInfo = () => {
+    try {
+      const cached = localStorage.getItem('authUser');
+      const user = cached ? JSON.parse(cached) : userProfile;
+      return {
+        departmentId: user?.departmentId || user?.department_id || null,
+        departmentName: (user?.department || user?.departmentName || '').toString().trim(),
+      };
+    } catch {
+      return { departmentId: null, departmentName: '' };
+    }
+  };
+
+  // Fetch users in the same department using provided auth endpoints
+  const fetchDepartmentUsers = async () => {
+    setIsLoadingDeptUsers(true);
+    try {
+      const token = getAuthToken();
+      const { departmentId, departmentName } = getCurrentUserDepartmentInfo();
+
+      const normalizedDepartmentName = (departmentName || '').toString().trim();
+      if (!normalizedDepartmentName) {
+        setDepartmentUsers([]);
+        setIsLoadingDeptUsers(false);
+        return;
+      }
+
+      // 1) Optional: ensure departments are available (best-effort)
+      try {
+        await fetch('http://localhost:3000/api/auth/departments', {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+      } catch (_) {}
+
+      // 2) Primary: /api/auth/departments/:name/users
+      let users = [];
+      try {
+        const depUrl = `http://localhost:3000/api/auth/departments/${encodeURIComponent(normalizedDepartmentName)}/users`;
+        const res = await fetch(depUrl, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        const list = json?.data?.users || json?.users || json?.data || [];
+        if (Array.isArray(list)) {
+          users = list;
+        }
+      } catch (_) {}
+
+      // 3) Fallback: /api/auth/users?department=...&role=employee&page=1&limit=100
+      if (!users.length) {
+        try {
+          const qs = new URLSearchParams({ department: normalizedDepartmentName, role: 'employee', page: '1', limit: '100' }).toString();
+          const url = `http://localhost:3000/api/auth/users?${qs}`;
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          const json = await res.json();
+          const list = json?.data?.users || json?.users || json?.data || [];
+          if (Array.isArray(list)) {
+            users = list;
+          }
+        } catch (_) {}
+      }
+
+      const normalized = (users || []).map((u) => ({
+        id: u?.id || u?._id || u?.user_id || '',
+        name: u?.full_name || u?.name || u?.username || '',
+        department: u?.department || u?.departmentName || '',
+      })).filter(u => u.id && u.name);
+
+      setDepartmentUsers(normalized);
+    } catch (e) {
+      console.warn('Could not load department users:', e);
+      setDepartmentUsers([]);
+    } finally {
+      setIsLoadingDeptUsers(false);
+    }
   };
 
   // Function to check if a processed request can be rejected (within 5 hours)
@@ -212,6 +300,67 @@ export default function RequestsManagement() {
     }
   };
 
+  // Translate role to Arabic label
+  const translateRoleToArabic = (role) => {
+    const normalizedRole = (role || "").toString().trim().toLowerCase();
+    if (normalizedRole === "admin") return "مدير";
+    if (normalizedRole === "manager") return "مسؤول";
+    if (normalizedRole === "employee" || normalizedRole === "user") return "موظف";
+    return role || "";
+  };
+
+  // Translate action to Arabic header line
+  const translateActionToArabicHeader = (action) => {
+    if (action === "approved") return "اعتمدت من قبل";
+    if (action === "rejected") return "رفضت من قبل";
+    return "";
+  };
+
+  // Build Arabic formatted processed_by value with line breaks
+  const buildProcessedByArabic = (action, role, name) => {
+    const header = translateActionToArabicHeader(action);
+    const roleAr = translateRoleToArabic(role);
+    const person = name || "";
+    return `${header}\n${roleAr}\n${person}`;
+  };
+
+  // Render processed_by in Arabic, supporting legacy English format
+  const renderProcessedByArabic = (processedBy) => {
+    if (!processedBy) return "-";
+
+    // If already contains line breaks, render each line separately
+    if (processedBy.includes("\n")) {
+      const parts = processedBy.split("\n");
+      return (
+        <div className="processed-by-arabic" style={{ whiteSpace: 'pre-line' }}>
+          {parts.map((p, idx) => (
+            <div key={idx}>{p}</div>
+          ))}
+        </div>
+      );
+    }
+
+    // Try to parse legacy format: "approved by: ROLE: NAME" or "rejected by: ROLE: NAME"
+    const legacyMatch = processedBy.match(/^(approved|rejected) by:\s*([^:]+):\s*(.+)$/i);
+    if (legacyMatch) {
+      const action = legacyMatch[1].toLowerCase();
+      const role = legacyMatch[2];
+      const name = legacyMatch[3];
+      const header = translateActionToArabicHeader(action);
+      const roleAr = translateRoleToArabic(role);
+      return (
+        <div className="processed-by-arabic" style={{ whiteSpace: 'pre-line' }}>
+          <div>{header}</div>
+          <div>{roleAr}</div>
+          <div>{name}</div>
+        </div>
+      );
+    }
+
+    // Fallback: show raw
+    return processedBy;
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     fetchRequests();
@@ -242,23 +391,31 @@ export default function RequestsManagement() {
   }, []);
 
   // Enhanced handle approve/reject action
-  const handleProcessRequest = async (requestId, action) => {
+  const handleProcessRequest = async (requestId, action, spareEmp) => {
     try {
       // ✅ FIX 5: Get actual JWT token
       const userToken = getAuthToken();
       
-      // Format processed_by field according to requirements
-      let processedBy = "";
-      if (action === "approved") {
-        processedBy = `approved by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
-      } else if (action === "rejected") {
-        processedBy = `rejected by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
-      }
+      // Format processed_by field according to new Arabic requirements
+      const processedBy = buildProcessedByArabic(action, adminRole || 'manager', adminName || '');
       
       const requestBody = {
         status: action,
         processed_by: processedBy,
       };
+
+      if (action === "approved") {
+        if (spareEmp && typeof spareEmp === 'object') {
+          if ((spareEmp.id || '').toString().trim()) {
+            requestBody.spare_employee_id = spareEmp.id;
+          }
+          if ((spareEmp.name || '').toString().trim()) {
+            requestBody.spare_employee_name = spareEmp.name;
+          }
+        } else if ((spareEmp || '').toString().trim()) {
+          requestBody.spare_employee = (spareEmp || '').toString().trim();
+        }
+      }
 
       if (action === "rejected") {
         requestBody.reason_for_rejection = rejectionReason || "تم الرفض من قبل المدير";
@@ -291,6 +448,13 @@ export default function RequestsManagement() {
           setRejectionReason("");
           setSelectedRequestId(null);
         }
+
+        // Close approve modal if it was open
+        if (action === "approved") {
+          setShowApproveModal(false);
+          setSpareEmployee("");
+          setSelectedApproveRequestId(null);
+        }
       } else {
         // Handle API error response
         handleApiError(result, response);
@@ -304,6 +468,35 @@ export default function RequestsManagement() {
         handleApiError(error);
       }
     }
+  };
+
+  // Open approve modal
+  const handleApproveClick = (requestId) => {
+    setSelectedApproveRequestId(requestId);
+    setSpareEmployee("");
+    setSpareEmployeeId("");
+    setShowApproveModal(true);
+    fetchDepartmentUsers();
+  };
+
+  // Close approve modal
+  const handleApproveModalClose = () => {
+    setShowApproveModal(false);
+    setSpareEmployee("");
+    setSpareEmployeeId("");
+    setSelectedApproveRequestId(null);
+  };
+
+  // Submit approve with spare employee
+  const handleApproveSubmit = (e) => {
+    e.preventDefault();
+    if (!(spareEmployeeId || "").trim()) {
+      setError('يرجى اختيار الموظف البديل.');
+      return;
+    }
+    const selected = departmentUsers.find(u => String(u.id) === String(spareEmployeeId));
+    const spareName = selected?.name || spareEmployee;
+    handleProcessRequest(selectedApproveRequestId, "approved", { id: spareEmployeeId, name: spareName });
   };
 
   // Handle reject button click - opens modal
@@ -369,8 +562,8 @@ export default function RequestsManagement() {
     try {
       const userToken = getAuthToken();
       
-      // Format the processed_by field as per requirements
-      const processedBy = `rejected by: ${adminRole || 'manager'}: ${adminName || 'Unknown'}`;
+      // Format the processed_by field as per new Arabic requirements
+      const processedBy = buildProcessedByArabic('rejected', adminRole || 'manager', adminName || '');
       
       // Format the reason_for_rejection field as per requirements
       const formattedReason = `مرفوض: ${rejectionReason}`;
@@ -597,9 +790,7 @@ export default function RequestsManagement() {
                       <div className="action-buttons">
                         <button
                           className="btn btn-approve"
-                          onClick={() =>
-                            handleProcessRequest(request.request_no, "approved")
-                          }
+                          onClick={() => handleApproveClick(request.request_no)}
                           title="اعتماد الطلب"
                         >
                           <i className="fas fa-check"></i>
@@ -665,6 +856,55 @@ export default function RequestsManagement() {
           }`}
         >
           {exportMessageProcessed}
+        </div>
+      )}
+
+      {/* Approve Modal - Spare Employee */}
+      {showApproveModal && (
+        <div className="modal-overlay" onClick={handleApproveModalClose}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>اعتماد الطلب</h3>
+              <button className="modal-close-btn" onClick={handleApproveModalClose}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleApproveSubmit} className="modal-form">
+              <div className="form-group">
+                <label htmlFor="spare-employee">اسم الموظف البديل:</label>
+                <select
+                  id="spare-employee"
+                  className="filter-select"
+                  value={spareEmployeeId}
+                  onChange={(e) => setSpareEmployeeId(e.target.value)}
+                  required
+                  disabled={isLoadingDeptUsers}
+                >
+                  <option value="">{isLoadingDeptUsers ? 'جاري تحميل الموظفين...' : 'اختر الموظف'}</option>
+                  {departmentUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                {!isLoadingDeptUsers && departmentUsers.length === 0 && (
+                  <small className="loading-text">لا توجد بيانات موظفين للقسم.</small>
+                )}
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleApproveModalClose}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="btn btn-success">
+                  اعتماد
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -756,7 +996,7 @@ export default function RequestsManagement() {
                       </span>
                     </td>
                     <td>{request.processing_date?.split('T')[0] || '-'}</td>
-                    <td dir="rtl" className="text-right">{request.processed_by || '-'}</td>
+                    <td dir="rtl" className="text-right">{renderProcessedByArabic(request.processed_by)}</td>
                     <td>{request.reason_for_rejection || "-"}</td>
                   </tr>
                 ))

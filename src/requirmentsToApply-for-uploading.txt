@@ -12,5 +12,4 @@
         - if administrative_position = عميد
 
 
-
         - if "المنصب الاداري" =  

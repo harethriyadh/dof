@@ -106,9 +106,14 @@ export default function AuthPage() {
         errors.push({ field: 'gender', message: 'النوع (الجنس) مطلوب ويجب أن يكون ذكراً أو أنثى' });
     }
     
-    // New validation for administrative position
-    if (payload.administrative_position && !administrativePositionOptions.includes(payload.administrative_position)) {
+    // Administrative position is optional; validate only when provided (1-100 chars and from allowed list)
+    if (payload.administrative_position) {
+      const pos = payload.administrative_position.trim();
+      if (pos.length < 1 || pos.length > 100) {
+        errors.push({ field: 'administrative_position', message: 'المنصب الاداري يجب أن يكون بين 1 و 100 حرف' });
+      } else if (!administrativePositionOptions.includes(payload.administrative_position)) {
         errors.push({ field: 'administrative_position', message: 'المنصب الاداري غير صالح' });
+      }
     }
     
     // New validation for degree
@@ -225,12 +230,14 @@ export default function AuthPage() {
       phone: registerData.phone,
       college: registerData.college,
       department: registerData.department,
-      administrative_position: registerData.administrative_position,
       degree: registerData.degree,
       gender: registerData.gender,
       role: registerData.role,
       leave_balances: registerData.leave_balances
     };
+    if ((registerData.administrative_position || '').toString().trim()) {
+      finalPayload.administrative_position = registerData.administrative_position;
+    }
 
 
     // Validate per guide

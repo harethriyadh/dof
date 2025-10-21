@@ -654,6 +654,22 @@ export default function RequestsManagement() {
     }
   };
 
+  // Check if current user is admin
+  const isAdminUser = useMemo(() => {
+    try {
+      const authUserStr = localStorage.getItem('authUser');
+      const authUser = authUserStr ? JSON.parse(authUserStr) : userProfile;
+      const role = authUser?.role?.toLowerCase?.();
+      const adminRole = authUser?.administrative_position?.toLowerCase?.();
+      
+      // Check for both role and administrative_position fields
+      return role === 'admin' || role === 'مدير' || 
+             adminRole === 'admin' || adminRole === 'مدير';
+    } catch {
+      return false;
+    }
+  }, [userProfile]);
+
   // Memoized counts
   const counts = useMemo(
     () => ({
@@ -716,14 +732,17 @@ export default function RequestsManagement() {
 
       {/* Summary Cards */}
       <div className="summary-cards-grid">
-        <div className="card summary-card summary-card-pending">
-          <div className="summary-card-content">
-            <LoadingValue className="summary-main-value summary-main-value-pending">
-              {counts.pending}
-            </LoadingValue>
-            <div className="summary-label">الطلبات المعلقة</div>
+        {/* Hide pending requests card for admin users */}
+        {!isAdminUser && (
+          <div className="card summary-card summary-card-pending">
+            <div className="summary-card-content">
+              <LoadingValue className="summary-main-value summary-main-value-pending">
+                {counts.pending}
+              </LoadingValue>
+              <div className="summary-label">الطلبات المعلقة</div>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="card summary-card summary-card-approved">
           <div className="summary-card-content">
@@ -744,81 +763,93 @@ export default function RequestsManagement() {
         </div>
       </div>
 
-      {/* Pending Requests Section */}
-      <div className="requests-section">
-        <div className="section-header pending-section-header">
-          <h3>الطلبات المعلقة</h3>
-          <p>الطلبات التي تحتاج إلى مراجعة واتخاذ قرار</p>
+      {/* Admin Users Notice */}
+      {isAdminUser && (
+        <div className="admin-notice">
+          <div className="notice-content">
+            <i className="fas fa-info-circle"></i>
+            <p>بصفتك مدير، يمكنك فقط مراجعة الطلبات المعالجة. الطلبات المعلقة متاحة للمسؤولين فقط.</p>
+          </div>
         </div>
+      )}
 
-        <div className="table-responsive-wrapper">
-          <table className="requests-table" id="pending-requests-table">
-            <thead>
-              <tr>
-                <th>الإجراءات</th>
-                <th>تاريخ الطلب</th>
-                <th>اسم الموظف</th>
-                <th>القسم</th>
-                <th>نوع الإجازة</th>
-                <th>من تاريخ</th>
-                <th>إلى تاريخ</th>
-                <th>عدد الأيام</th>
-                <th>السبب</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
+      {/* Pending Requests Section - Hidden for Admin Users */}
+      {!isAdminUser && (
+        <div className="requests-section">
+          <div className="section-header pending-section-header">
+            <h3>الطلبات المعلقة</h3>
+            <p>الطلبات التي تحتاج إلى مراجعة واتخاذ قرار</p>
+          </div>
+
+          <div className="table-responsive-wrapper">
+            <table className="requests-table" id="pending-requests-table">
+              <thead>
                 <tr>
-                  <td colSpan="9" className="loading-data">
-                    <div className="loading-spinner">
-                      <i className="fas fa-spinner fa-spin"></i>
-                      <span>جاري تحميل الطلبات المعلقة...</span>
-                    </div>
-                  </td>
+                  <th>الإجراءات</th>
+                  <th>تاريخ الطلب</th>
+                  <th>اسم الموظف</th>
+                  <th>القسم</th>
+                  <th>نوع الإجازة</th>
+                  <th>من تاريخ</th>
+                  <th>إلى تاريخ</th>
+                  <th>عدد الأيام</th>
+                  <th>السبب</th>
                 </tr>
-              ) : pendingRequests.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="no-data">
-                    <i className="fas fa-inbox"></i>
-                    <p>لا توجد طلبات معلقة</p>
-                  </td>
-                </tr>
-              ) : (
-                pendingRequests.map((request) => (
-                  <tr key={request.request_no} className="pending-row">
-                    <td className="actions-cell">
-                      <div className="action-buttons">
-                        <button
-                          className="btn btn-approve"
-                          onClick={() => handleApproveClick(request.request_no)}
-                          title="اعتماد الطلب"
-                        >
-                          <i className="fas fa-check"></i>
-                        </button>
-                        <button
-                          className="btn btn-reject"
-                          onClick={() => handleRejectClick(request.request_no)}
-                          title="رفض الطلب"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="9" className="loading-data">
+                      <div className="loading-spinner">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <span>جاري تحميل الطلبات المعلقة...</span>
                       </div>
                     </td>
-                    <td>{request.request_date?.split('T')[0]}</td>
-                    <td>{request.employee_name}</td>
-                    <td>{request.department}</td>
-                    <td>{request.leave_type}</td>
-                    <td>{request.start_date?.split('T')[0]}</td>
-                    <td>{request.end_date?.split('T')[0]}</td>
-                    <td>{request.number_of_days}</td>
-                    <td>{request.reason || '-'}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : pendingRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="no-data">
+                      <i className="fas fa-inbox"></i>
+                      <p>لا توجد طلبات معلقة</p>
+                    </td>
+                  </tr>
+                ) : (
+                  pendingRequests.map((request) => (
+                    <tr key={request.request_no} className="pending-row">
+                      <td className="actions-cell">
+                        <div className="action-buttons">
+                          <button
+                            className="btn btn-approve"
+                            onClick={() => handleApproveClick(request.request_no)}
+                            title="اعتماد الطلب"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                          <button
+                            className="btn btn-reject"
+                            onClick={() => handleRejectClick(request.request_no)}
+                            title="رفض الطلب"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </td>
+                      <td>{request.request_date?.split('T')[0]}</td>
+                      <td>{request.employee_name}</td>
+                      <td>{request.department}</td>
+                      <td>{request.leave_type}</td>
+                      <td>{request.start_date?.split('T')[0]}</td>
+                      <td>{request.end_date?.split('T')[0]}</td>
+                      <td>{request.number_of_days}</td>
+                      <td>{request.reason || '-'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filters and Export for Processed Requests */}
       <div className="filters">

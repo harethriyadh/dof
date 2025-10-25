@@ -763,15 +763,6 @@ export default function RequestsManagement() {
         </div>
       </div>
 
-      {/* Admin Users Notice */}
-      {isAdminUser && (
-        <div className="admin-notice">
-          <div className="notice-content">
-            <i className="fas fa-info-circle"></i>
-            <p>بصفتك مدير، يمكنك فقط مراجعة الطلبات المعالجة. الطلبات المعلقة متاحة للمسؤولين فقط.</p>
-          </div>
-        </div>
-      )}
 
       {/* Pending Requests Section - Hidden for Admin Users */}
       {!isAdminUser && (

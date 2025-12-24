@@ -1,0 +1,5 @@
+/* Netlify redirects configuration for React Router */
+/* All requests without a file extension or . in the path will be redirected to index.html */
+/* This allows React Router to handle all routing */
+
+/*  /index.html   200

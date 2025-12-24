@@ -87,7 +87,7 @@ export default function RequestsManagement() {
 
       // 1) Optional: ensure departments are available (best-effort)
       try {
-  await fetch('http://localhost:3000/api/auth/departments', {
+  await fetch('https://dof-b.onrender.com/api/auth/departments', {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
       } catch (_) {}
@@ -95,7 +95,7 @@ export default function RequestsManagement() {
       // 2) Primary: /api/auth/departments/:name/users
       let users = [];
       try {
-  const depUrl = `http://localhost:3000/api/auth/departments/${encodeURIComponent(normalizedDepartmentName)}/users`;
+  const depUrl = `https://dof-b.onrender.com/api/auth/departments/${encodeURIComponent(normalizedDepartmentName)}/users`;
         const res = await fetch(depUrl, {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
@@ -110,7 +110,7 @@ export default function RequestsManagement() {
       if (!users.length) {
         try {
           const qs = new URLSearchParams({ department: normalizedDepartmentName, role: 'employee', page: '1', limit: '100' }).toString();
-          const url = `http://localhost:3000/api/auth/users?${qs}`;
+          const url = `https://dof-b.onrender.com/api/auth/users?${qs}`;
           const res = await fetch(url, {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
@@ -174,7 +174,7 @@ export default function RequestsManagement() {
       console.log('No user data in localStorage, fetching from API...');
       const userToken = getAuthToken();
       
-  const response = await fetch("http://localhost:3000/api/auth/profile", {
+  const response = await fetch("https://dof-b.onrender.com/api/auth/profile", {
         headers: {
           Authorization: `Bearer ${userToken}`,
           'Content-Type': 'application/json'
@@ -240,7 +240,7 @@ export default function RequestsManagement() {
       // ✅ FIX 2: Get actual JWT token
       const userToken = getAuthToken();
       
-  const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("https://dof-b.onrender.com/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${userToken}`,
           'Content-Type': 'application/json'
@@ -422,7 +422,7 @@ export default function RequestsManagement() {
       }
 
       const response = await fetch(
-  `http://localhost:3000/api/leave-requests/${requestId}/process`,
+  `https://dof-b.onrender.com/api/leave-requests/${requestId}/process`,
         {
           method: "PATCH",
           headers: {
@@ -575,7 +575,7 @@ export default function RequestsManagement() {
       };
 
       const response = await fetch(
-  `http://localhost:3000/api/leave-requests/${requestId}/process`,
+  `https://dof-b.onrender.com/api/leave-requests/${requestId}/process`,
         {
           method: "PATCH",
           headers: {

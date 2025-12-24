@@ -29,7 +29,7 @@ export default function Profile() {
   const [cpSuccess, setCpSuccess] = useState(false);
   
   const navigate = useNavigate();
-  const API_BASE_URL = "http://localhost:3000/api/auth";
+  const API_BASE_URL = "https://dof-b.onrender.com/api/auth";
 
   useEffect(() => {
     const fetchProfile = async () => {

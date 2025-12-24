@@ -33,7 +33,7 @@ export default function MyQuests() {
       const userData = JSON.parse(userDataStr);
       const userId = userData.id || userData.user_id;
 
-  const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("https://dof-b.onrender.com/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -90,7 +90,7 @@ export default function MyQuests() {
           return;
         }
 
-  const response = await fetch(`http://localhost:3000/api/leave-requests/${id}`, {
+  const response = await fetch(`https://dof-b.onrender.com/api/leave-requests/${id}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,

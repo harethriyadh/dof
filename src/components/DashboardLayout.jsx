@@ -234,7 +234,7 @@ export default function DashboardLayout() {
       }
 
       // Fetch user's leave requests
-  const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("https://dof-b.onrender.com/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -326,7 +326,7 @@ export default function DashboardLayout() {
           return;
         }
 
-  const response = await fetch('http://localhost:3000/api/auth/profile', {
+  const response = await fetch('https://dof-b.onrender.com/api/auth/profile', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -559,7 +559,7 @@ export default function DashboardLayout() {
         const currentEmployeeName = claims.employee_name || claims.name || claims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
         const currentEmail = claims.email || claims.employee_email || cachedUser.email || cachedUser.employee_email || null;
 
-  const res = await fetch("http://localhost:3000/api/leave-requests", {
+  const res = await fetch("https://dof-b.onrender.com/api/leave-requests", {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -1007,7 +1007,7 @@ export default function DashboardLayout() {
           reason: description || ""
       };
 
-  const response = await fetch('http://localhost:3000/api/leave-requests', {
+  const response = await fetch('https://dof-b.onrender.com/api/leave-requests', {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',

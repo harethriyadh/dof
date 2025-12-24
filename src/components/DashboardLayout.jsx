@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
-import AllRequests from "../pages/AllRequests";
-import RequestsManagement from "../pages/RequestsManagement";
-import Profile from "../pages/Profile";
-import Help from "../pages/Help";
+import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import LoadingSpinner from "./LoadingSpinner.jsx";
 import "../dashboard.css"; // Import the CSS for the layout
 import "../Home.css"; // Import Home CSS
+
+// Lazy load page components for code splitting
+const AllRequests = lazy(() => import("../pages/AllRequests"));
+const RequestsManagement = lazy(() => import("../pages/RequestsManagement"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Help = lazy(() => import("../pages/Help"));
 
 // --- NEW UTILITY FUNCTION: Calculate motherhood leave end date (51 workdays excluding Thu/Fri)
 /**
@@ -231,7 +234,7 @@ export default function DashboardLayout() {
       }
 
       // Fetch user's leave requests
-      const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -323,7 +326,7 @@ export default function DashboardLayout() {
           return;
         }
 
-        const response = await fetch('http://localhost:3000/api/auth/profile', {
+  const response = await fetch('http://localhost:3000/api/auth/profile', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -556,7 +559,7 @@ export default function DashboardLayout() {
         const currentEmployeeName = claims.employee_name || claims.name || claims.fullName || cachedUser.full_name || cachedUser.name || cachedUser.username || null;
         const currentEmail = claims.email || claims.employee_email || cachedUser.email || cachedUser.employee_email || null;
 
-        const res = await fetch("http://localhost:3000/api/leave-requests", {
+  const res = await fetch("http://localhost:3000/api/leave-requests", {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -1004,7 +1007,7 @@ export default function DashboardLayout() {
           reason: description || ""
       };
 
-      const response = await fetch('http://localhost:3000/api/leave-requests', {
+  const response = await fetch('http://localhost:3000/api/leave-requests', {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
@@ -1469,7 +1472,11 @@ export default function DashboardLayout() {
           </div>
         );
       case "requests":
-        return <AllRequests />;
+        return (
+          <Suspense fallback={<LoadingSpinner size="large" />}>
+            <AllRequests />
+          </Suspense>
+        );
       case "management":
         // Check if user has management access
         if (!hasManagementAccess()) {
@@ -1491,11 +1498,23 @@ export default function DashboardLayout() {
             </div>
           );
         }
-        return <RequestsManagement />;
+        return (
+          <Suspense fallback={<LoadingSpinner size="large" />}>
+            <RequestsManagement />
+          </Suspense>
+        );
       case "profile":
-        return <Profile />;
+        return (
+          <Suspense fallback={<LoadingSpinner size="large" />}>
+            <Profile />
+          </Suspense>
+        );
       case "help":
-        return <Help />;
+        return (
+          <Suspense fallback={<LoadingSpinner size="large" />}>
+            <Help />
+          </Suspense>
+        );
       default:
         return null;
     }

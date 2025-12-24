@@ -17,8 +17,8 @@
   text-align: right;
   color: #202124; /* Dark text for high contrast */
   overflow-x: auto;
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   width: 100%;
   box-sizing: border-box;
   border-radius: 8px;
@@ -37,7 +37,7 @@
   overflow: hidden;
   box-shadow: none; /* Disable shadows */
   width: 100%;
-  max-width: 600px;
+  max-width: none;
 }
 
 .profile-page-header::before {
@@ -78,9 +78,9 @@
   min-height: 140px;
   box-shadow: 0 4px 24px rgba(32, 107, 196, 0.08);
   border: none;
-  margin: 0 auto;
+  margin: 0;
   width: 100%;
-  max-width: 600px;
+  max-width: none;
   min-width: 0;
   border-radius: 12px;
   box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.05);

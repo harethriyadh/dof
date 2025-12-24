@@ -1,8 +1,10 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import DashboardLayout from "./components/DashboardLayout.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
-import AuthPage from "./components/auth/AuthPage.jsx";
+
+// Lazy load components for code splitting
+const DashboardLayout = lazy(() => import("./components/DashboardLayout.jsx"));
+const AuthPage = lazy(() => import("./components/auth/AuthPage.jsx"));
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {

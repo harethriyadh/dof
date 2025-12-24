@@ -1,0 +1,217 @@
+
+Profile edit processes and flows — actions performed by the current `Profile` page
+
+Note: This trimmed document reflects only the behaviors and flows implemented in the repository's `src/pages/Profile.jsx` as it exists now. It does not include email verification flows, avatar upload, or separate password-change modals because those features are not implemented on this page.
+
+Summary of what's implemented on the page
+- Editable fields present: `full_name`, `phone`.
+- The page shows a secondary "Change Password" link under the header (not a primary button). Password changes are handled in a dedicated modal.
+- Display-only fields: role, department/specialization, college, gender are shown but not editable.
+- The page fetches profile data from GET /api/auth/profile and updates via PUT /api/auth/profile (payload limited to `full_name` and `phone`).
+
+1) Entering edit mode (exact behavior)
+- Clicking "تعديل الملف الشخصي" toggles edit mode via `isEditing` state.
+- On first toggle into edit mode the form fields are initialized from `userData` (loaded from the server and stored in state).
+- The form includes a "Cancel" (toggle back) and a "Save" button. "Save" is disabled until at least one change is detected and there are no validation errors.
+
+2) Client-side validation implemented (exact rules in code)
+- `full_name`:
+  - Required. Trimmed value must not be empty.
+  - Maximum length check in code: >128 characters considered invalid (error message provided).
+- `phone`:
+  - Required (as enforced in the form). Validation uses regex: /^[0-9+\s()-]{7,20}$/ — accepts digits, +, spaces, parentheses, hyphen, length 7–20.
+- Password fields (present):
+  - If a new password is entered, the code validates that `password === confirmPassword` and `password.length >= 8` before proceeding.
+  - If password validation passes, the UI shows an informational message that this form does NOT change the password on the server. The password fields are cleared after the save attempt.
+
+3) Save flow and network requests (exact endpoints used in code)
+- Endpoint used for fetch: GET http://localhost:3000/api/auth/profile (Authorization: Bearer <token>)
+- Endpoint used for update: PUT http://localhost:3000/api/auth/profile
+- Update payload (what the page actually sends): { full_name, phone }
+- The code handles responses as follows:
+  - 200 OK: expects { data: { user, token? } } — if `data.token` exists it is stored in `localStorage` under `authToken`; `data.user` replaces local `userData` and `authUser` in localStorage.
+  - 400 Bad Request: displayed as validation error message(s) using `updateMessage`.
+  - 401 Unauthorized: the code clears `authToken` and navigates the user to `/login`.
+  - Other non-OK responses: show an error message in `updateMessage`.
+
+4) Local state updates (exact actions in code)
+- On successful update the page updates `userData` state and writes `authUser` to `localStorage`.
+- If the server returns `data.token`, the page updates `authToken` in `localStorage`.
+
+5) UI behavior during save (exact behavior)
+- While saving `updateLoading` is true: inputs and buttons are disabled, a spinner and status text are shown on the Save button (the page displays Arabic spinner text "جاري الحفظ...").
+- On success `updateMessage` is set to the success Arabic message present in code and `updateSuccess` becomes true.
+- On client-side validation errors the save is aborted and field-level messages are set in `fieldErrors`.
+
+6) Password change handling (explicit in code)
+- Although password fields exist in the form, the page is implemented to NOT include password fields in the PUT payload.
+- If the user enters a password, the client verifies equality and minimum length, then sets `updateMessage` with an informational Arabic note indicating that password changes are not supported via this form and proceeds to update only full_name and phone.
+
+7) Tests & QA items relevant to the current page
+- Functional tests to implement now:
+  - Fetch profile displays user fields correctly.
+  - Enter edit mode: fields pre-fill with server data.
+  - Client-side validation: required name and valid phone patterns block save and show messages.
+  - Save with valid changes: PUT is called, `authUser` in `localStorage` is updated, and success message is shown.
+  - Save when server returns 401: `authToken` cleared and user redirected to `/login`.
+  - Enter a new password and mismatched confirm: save is blocked with message.
+  - Enter a new password and matching confirm: client shows informational message about password not being changed and continues to update the other fields.
+- Edge cases:
+  - Network failure during save: show an error message and allow retry while preserving unsaved changes.
+  - Server 500: show a generic error message.
+
+8) Removed/omitted items (not present on this page)
+- Avatar upload / image cropping (no upload input or avatar upload endpoint used here).
+- Email-change verification flow (no email editing inputs are present or used here).
+- Phone OTP verification flow (no OTP flow triggered by this page).
+- Separate change-password modal or dedicated change-password endpoint usage (the page does not call POST /api/auth/change-password).
+
+Short checklist (what should be true for this page)
+- [ ] `full_name` and `phone` appear and are editable when entering edit mode.
+- [ ] Save only sends `{ full_name, phone }` to PUT /api/auth/profile.
+- [ ] Password inputs are present but not sent; client shows appropriate informational message.
+- [ ] On 401 the session clears and the user is redirected to login.
+
+If you'd like, I can now:
+- A) Convert this trimmed English file to Markdown and add it to `docs/PROFILE_EDIT_PROCESSES.md`.
+- B) Generate focused unit/integration test stubs that target only the implemented behaviors (fetch, edit, validation, save, 401 handling, password-info behavior).
+- C) Keep the file as-is.
+
+1) Entering edit mode
+- Initialize the edit form from the local user object (`authUser`) or fetch from the server if needed.
+- Pre-fill editable fields with current values: `full_name`, `phone`, `email` (if shown), `department`, `specialization`, `gender`, `avatar`.
+- Show editable UI controls and switch the page to an "editing" state.
+- Controls: the "Save" button is disabled by default until a valid change is detected, and an "Cancel" button restores original values and exits edit mode.
+
+2) Editable fields and their behavior
+- Full name (`full_name`)
+  - Required (unless policy differs), max length typically 128 chars.
+  - Trim leading/trailing whitespace; disallow input that is only whitespace.
+  - Apply simple sanitization before sending to the server.
+- Phone (`phone`)
+  - Required or optional depending on product rules; common validation: /^[0-9+\s()-]{7,20}$/.
+  - Support local/international formats. Optionally trigger an SMS verification flow when phone changes.
+- Email (`email`)
+  - When changed, require email verification (send verification email with link or OTP).
+  - Do not switch the user's primary email status until verification completes.
+- Department / Role / Specialization
+  - Typically a select or autocomplete. Changing department may require backend permission updates.
+- Avatar / Profile picture
+  - Upload constraints: max size (e.g. 2MB), allowed formats: jpg, png, webp.
+  - Show a client-side preview and optionally allow crop/resize before upload.
+  - Upload can be a dedicated endpoint (POST /api/files/avatar) or sent within the profile update as a prepared URL.
+
+3) UI states during validation and save
+- Show a spinner or saving indicator while the request is in-flight and disable inputs.
+- On success: show a brief success message ("Changes saved") and visually confirm updated data.
+- On error: show field-level errors or a general error banner; use `aria-describedby` and `aria-live` for accessibility.
+- Save-enable logic: at least one changed field and no client-side validation errors.
+
+4) Network operations (API)
+- Profile update (primary flow)
+  - Endpoint: PUT /api/auth/profile (or the backend-specific endpoint).
+  - Payload example: { full_name, phone, department?, specialization?, avatar_url? }
+  - Auth: Authorization: Bearer <authToken>
+  - Expected responses:
+    - 200 OK: { data: { user, token? } } — server may return updated user object and optionally a refreshed token.
+    - 400 Bad Request: { message, errors: [...] } — validation errors.
+    - 401 Unauthorized: invalid session — clear client token and redirect to login.
+    - 409 Conflict: conflicts such as email change requiring verification.
+- Change password (separate flow)
+  - Password changes should NOT be sent via the profile PUT endpoint. Use a dedicated flow/modal.
+  - Endpoint: POST /api/auth/change-password
+  - Payload: { current_password, new_password }
+  - Response: 200 OK on success, 400/401 on validation/auth failures.
+- Email change & verification
+  - POST /api/auth/update-email -> sends verification email to the new address.
+  - POST /api/auth/confirm-email { token } to confirm.
+- Phone change (SMS OTP)
+  - POST /api/auth/update-phone -> sends OTP to the new number.
+  - POST /api/auth/confirm-phone { code } to confirm.
+- Avatar upload
+  - Separate upload endpoint or included in profile update. Server should return final `avatar_url`.
+
+5) Local storage and client state
+- On successful update, replace the `authUser` stored in `localStorage` and update any app state (Redux/Context) accordingly.
+- If the server returns a new token, update `authToken` in `localStorage`.
+- Never store passwords in localStorage or in plain text anywhere on the client.
+
+6) Security considerations
+- Never send passwords through PUT /api/auth/profile; use dedicated endpoints secured with TLS.
+- Always validate auth token; on 401, log out the user and redirect to login.
+- Enforce file-type and size checks on avatar upload.
+- Apply CSRF protection when the backend session model requires it.
+- Avoid leaking sensitive data in error messages.
+- Backend should persist audit logs for sensitive changes (e.g., phone/email/password changes).
+
+7) Verification & testing (QA)
+- Functional tests:
+  - Open edit mode, change fields and save: changes should reflect in UI and in `authUser`.
+  - Save without changes: Save button should remain disabled.
+  - Invalid full name / empty name: show validation error.
+  - Invalid phone: show validation error.
+  - Email change should not be applied until verification completes.
+  - Password change flow (modal): test incorrect current password and new password policy failures.
+  - Avatar upload: large/unsupported file types should be rejected.
+- Edge cases:
+  - Network drop during save: show retryable error and don't lose unsaved edits.
+  - Server 500: show generic error banner.
+  - Server 401 during save: clear session and redirect to login.
+  - Concurrent edits from another device: offer to refresh with latest server copy or merge conflicts.
+
+8) UX recommendations
+- Show immediate avatar preview after selection.
+- For email/phone changes, guide the user through verification flow with clear timers and resend options.
+- Brief success toast that disappears after 2-3 seconds; keep focus management logical after errors.
+- Full RTL support for Arabic UIs (labels, alignment, icon placement).
+- Accessibility: label inputs, manage focus after validation errors, use `aria-live` for status messages.
+
+9) Performance and reliability
+- Reuse cached `authUser` data when opening edit mode instead of refetching unless data is stale.
+- Compress/resize images client-side before upload to reduce bandwidth.
+- Debounce auto-validate or backend-lookup operations (e.g., checking email availability).
+
+10) Analytics and logging
+- Track events (without sensitive data) for:
+  - Enter edit mode
+  - Save success / save failure
+  - Start / success / failure of change-password flow
+- Do not include passwords or other secrets in analytic events.
+
+11) Example user-facing messages (English)
+- Success: "Changes saved successfully"
+- Field validation: "Full name is required"
+- Generic failure: "An unexpected error occurred. Please try again later."
+- Session expired: "Your session has ended. Please log in again."
+
+12) Example requests / responses (suggested)
+- Profile update (PUT)
+  - URL: PUT /api/auth/profile
+  - Body: { "full_name": "Ahmed Ali", "phone": "+9647712345678" }
+- Success response
+  - 200 OK
+  - { "data": { "user": { /* user object */ }, "token": "..." } }
+- Validation failure
+  - 400 Bad Request
+  - { "message": "Validation failed", "errors": [{ "field": "phone", "message": "Invalid phone" }] }
+
+13) Engineering notes / architectural options
+- Use ETag / If-Match headers to handle concurrent update conflicts.
+- Keep a `tokenVersion` or `password_changed_at` strategy to invalidate tokens after password change.
+- Keep sensitive flows (password, 2FA) separate from general profile updates.
+
+14) Short QA checklist before closing
+- [ ] Editable fields pre-fill with current values when entering edit mode.
+- [ ] Save sends expected payload to server.
+- [ ] On success, `authUser` and `authToken` (if returned) are updated locally.
+- [ ] 400/401/500 errors present clear messages.
+- [ ] Avatar upload respects size/format limitations.
+- [ ] Email/phone change triggers verification steps.
+- [ ] Passwords are never sent as part of PUT /api/auth/profile.
+
+Document end — the above sections can be adapted to the backend policies or product rules (for example: whether email changes are allowed, or if SMS is available).
+
+If you want, I can now:
+- A) Add this file as a README in `docs/` (Markdown conversion).
+- B) Generate unit/integration test stubs that cover the happy path and 2 edge cases.
+- C) Create an English + Arabic paired doc and link them.

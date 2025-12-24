@@ -1,0 +1,78 @@
+FRONTEND LOGIN INTEGRATION SPECIFICATIONS (LOCAL)
+===============================================
+
+OVERVIEW
+--------
+This document contains the technical details for local development where the backend is served from http://localhost:3000.
+
+FRONTEND CONFIGURATION
+----------------------
+- Frontend URL: http://localhost:5173 (Vite dev server default)
+- API Base URL: http://localhost:3000/api/v1
+- Environment Variable: VITE_API_BASE (optional override)
+
+LOGIN ENDPOINT SPECIFICATIONS
+-----------------------------
+Method: POST
+URL: http://localhost:3000/api/v1/login
+Content-Type: application/json
+
+Request Body:
+{
+    "username": "johndoe",
+    "password": "password123"
+}
+
+Expected Response Format:
+{
+    "success": true,
+    "data": {
+        "token": "<JWT>",
+        "user": { /* user object */ }
+    }
+}
+
+CORS REQUIREMENTS
+----------------
+The backend MUST allow the frontend origin to prevent "Failed to fetch" errors.
+
+Required CORS Configuration:
+- Origin: http://localhost:5173
+- Methods: POST, GET, PUT, DELETE, OPTIONS
+- Headers: Content-Type, Authorization
+- Credentials: true (if using cookies)
+
+AUTHENTICATION TOKEN
+--------------------
+- Token Type: JWT
+- Storage: localStorage (key: 'authToken')
+- Expiry: 24 hours (as per backend implementation)
+- Header Format: Authorization: Bearer <token>
+
+PROTECTED ROUTES
+----------------
+All API endpoints (except login) should validate the Authorization header and return 401 when missing/invalid.
+
+BASE URL (LOCAL DEV)
+--------------------
+- http://localhost:3000/api/v1
+  - Health: http://localhost:3000/health
+  - Login:  http://localhost:3000/api/v1/login
+  - Register: http://localhost:3000/api/v1/register
+
+Curl Examples (local):
+
+- Login:
+  curl -X POST http://localhost:3000/api/v1/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"johndoe","password":"password123"}'
+
+- Register:
+  curl -X POST http://localhost:3000/api/v1/register \
+    -H "Content-Type: application/json" \
+    -d '{"fullName":"New User","username":"newuser123","password":"test123","role":"Employee"}'
+
+Notes
+-----
+- For production, update the origins and base URLs accordingly.
+- For local dev, set VITE_API_BASE=http://localhost:3000/api/v1 if you prefer central configuration.

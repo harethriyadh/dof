@@ -1,0 +1,47 @@
+Request Management System (نظام إدارة الطلبات)
+
+How ready the app is (%)
+- Estimated readiness: 70%
+  - Reasoning: The frontend (React + Vite) and Arabic RTL UI are implemented with authentication pages, routing, and a functional Requests Management screen. The app still depends on a live backend/database to fully operate beyond demo mode (README notes demo data and future wiring to a real backend).
+
+What is accomplished
+- Arabic-first (RTL) responsive UI and project setup (React 19, Vite, Tailwind)
+- Authentication pages (login and sign up) and routing to dashboard
+- Requests Management screen with:
+  - Separation of pending vs. processed requests
+  - Approve flow with optional spare/replacement employee selection
+  - Reject flow with mandatory reason
+  - Guardrail: rejecting processed requests limited to a short time window (e.g., within 5 hours)
+  - Department users fetching to assist in approvals
+  - Role-aware filtering for managers (department-scoped views)
+  - Exporting processed requests (PDF/table via html2canvas + jsPDF + jsPDF-Autotable)
+- Token-based API calls prepared (Authorization: Bearer <JWT>) to expected endpoints
+
+What is still needed
+- Connect to a real backend and database (replace demo data)
+- Implement/verify the referenced API endpoints on the server side:
+  - /api/auth/profile
+  - /api/auth/departments and /api/auth/departments/:name/users
+  - /api/auth/users?department=...&role=employee
+  - /api/leave-requests
+- Persist and manage auth tokens securely across sessions
+- Enforce role/permission checks on the server (not only in the UI)
+- Production configuration (env variables, build, and deployment setup)
+
+All features (current)
+- Authentication and user management UI (login, sign up)
+- Role-aware UI (e.g., manager department scoping)
+- Create/view/manage leave requests (frontend flows)
+- Pending vs. processed segregation
+- Approve with spare/replacement employee
+- Reject with required reason and time window constraint for processed items
+- Department users lookup to support approvals
+- Export processed requests (PDF/table)
+- Arabic RTL, responsive UI
+
+Missing features (from existing info only)
+- Real backend/database integration (README notes demo data and future wiring)
+- Live server endpoints matching the referenced API routes
+- Secure, persistent auth token handling in production
+- Server-side enforcement/validation of roles and request rules
+

@@ -87,7 +87,7 @@ export default function RequestsManagement() {
 
       // 1) Optional: ensure departments are available (best-effort)
       try {
-        await fetch('http://localhost:3000/api/auth/departments', {
+  await fetch('http://localhost:3000/api/auth/departments', {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
       } catch (_) {}
@@ -95,7 +95,7 @@ export default function RequestsManagement() {
       // 2) Primary: /api/auth/departments/:name/users
       let users = [];
       try {
-        const depUrl = `http://localhost:3000/api/auth/departments/${encodeURIComponent(normalizedDepartmentName)}/users`;
+  const depUrl = `http://localhost:3000/api/auth/departments/${encodeURIComponent(normalizedDepartmentName)}/users`;
         const res = await fetch(depUrl, {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
@@ -174,7 +174,7 @@ export default function RequestsManagement() {
       console.log('No user data in localStorage, fetching from API...');
       const userToken = getAuthToken();
       
-      const response = await fetch("http://localhost:3000/api/auth/profile", {
+  const response = await fetch("http://localhost:3000/api/auth/profile", {
         headers: {
           Authorization: `Bearer ${userToken}`,
           'Content-Type': 'application/json'
@@ -240,7 +240,7 @@ export default function RequestsManagement() {
       // ✅ FIX 2: Get actual JWT token
       const userToken = getAuthToken();
       
-      const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${userToken}`,
           'Content-Type': 'application/json'
@@ -422,7 +422,7 @@ export default function RequestsManagement() {
       }
 
       const response = await fetch(
-        `http://localhost:3000/api/leave-requests/${requestId}/process`,
+  `http://localhost:3000/api/leave-requests/${requestId}/process`,
         {
           method: "PATCH",
           headers: {
@@ -575,7 +575,7 @@ export default function RequestsManagement() {
       };
 
       const response = await fetch(
-        `http://localhost:3000/api/leave-requests/${requestId}/process`,
+  `http://localhost:3000/api/leave-requests/${requestId}/process`,
         {
           method: "PATCH",
           headers: {
@@ -620,14 +620,98 @@ export default function RequestsManagement() {
     );
   }, [processedRequests, processedStatusFilter]);
 
-  // Handle export processed requests to PDF (NO CANVAS/JSPDF)
-  const handleExportProcessedPDF = () => {
-    setIsExportingProcessed(true);
-    setExportMessageProcessed("لا يوجد دعم لتصدير PDF حاليًا.");
-    setTimeout(() => {
-      setIsExportingProcessed(false);
-      setExportMessageProcessed("");
-    }, 3000);
+  // Handle export processed requests to PDF
+  const handleExportProcessedPDF = async () => {
+    try {
+      setIsExportingProcessed(true);
+      setExportMessageProcessed("جاري تصدير PDF...");
+      
+      // Dynamically import PDF libraries only when needed
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+      
+      // Get the table element and wrapper
+      const table = document.getElementById('processed-requests-table');
+      const wrapper = document.getElementById('processed-requests-scroll-container');
+      
+      if (!table || !wrapper) {
+        setExportMessageProcessed("لم يتم العثور على الجدول للتصدير.");
+        setTimeout(() => {
+          setExportMessageProcessed("");
+          setIsExportingProcessed(false);
+        }, 3000);
+        return;
+      }
+
+      // Temporarily apply the full-width style to the wrapper
+      wrapper.classList.add('force-full-width');
+
+      // Configure html2canvas options (captures full width due to overridden styles)
+      const options = {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: table.scrollWidth,
+        height: table.scrollHeight
+      };
+
+      // Generate canvas from table
+      const canvas = await html2canvas(table, options);
+      const imgData = canvas.toDataURL('image/png');
+      
+      // IMMEDIATELY remove the temporary style to restore responsiveness
+      wrapper.classList.remove('force-full-width');
+      
+      // Create PDF in Landscape Mode ('l')
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const imgWidth = 297; // A4 Landscape width
+      const pageHeight = 210; // A4 Landscape height
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to PDF
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Set RTL direction for Arabic text
+      pdf.setR2L(true);
+      
+      // Save the PDF
+      pdf.save('الطلبات المعالجة.pdf');
+      
+      setExportMessageProcessed("تم تصدير PDF بنجاح!");
+      setTimeout(() => {
+        setExportMessageProcessed("");
+        setIsExportingProcessed(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setExportMessageProcessed("فشل في تصدير PDF. يرجى المحاولة مرة أخرى.");
+      setTimeout(() => {
+        setExportMessageProcessed("");
+        setIsExportingProcessed(false);
+      }, 3000);
+      
+      // Ensure cleanup even on error
+      const wrapper = document.getElementById('processed-requests-scroll-container');
+      if (wrapper) {
+        wrapper.classList.remove('force-full-width');
+      }
+    }
   };
 
   // Get status color class

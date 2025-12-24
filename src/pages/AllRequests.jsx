@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../AllRequests.css"; // Import the CSS file
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// Lazy load PDF libraries to reduce initial bundle size
 
 export default function MyQuests() {
   const [statusFilter, setStatusFilter] = useState('all');
@@ -34,7 +33,7 @@ export default function MyQuests() {
       const userData = JSON.parse(userDataStr);
       const userId = userData.id || userData.user_id;
 
-      const response = await fetch("http://localhost:3000/api/leave-requests", {
+  const response = await fetch("http://localhost:3000/api/leave-requests", {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -91,7 +90,7 @@ export default function MyQuests() {
           return;
         }
 
-        const response = await fetch(`http://localhost:3000/api/leave-requests/${id}`, {
+  const response = await fetch(`http://localhost:3000/api/leave-requests/${id}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -164,6 +163,12 @@ export default function MyQuests() {
   const handleExportPDF = async () => {
     try {
       setExportMessage("جاري تصدير PDF...");
+      
+      // Dynamically import PDF libraries only when needed
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
       
       // Get the table element and wrapper
       const table = document.getElementById('requests-table');
